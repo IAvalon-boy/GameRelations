@@ -1,97 +1,101 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Theory Lab - Multiplayer Real</title>
-    <!-- Librería oficial de Supabase -->
+    <title>Vibe Check - IG Edition</title>
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --bg-color: #0d0607;
-            --panel-bg: #180d0e;
-            --panel-border: #331518;
-            --accent-red: #ff2a4b;
-            --accent-red-dark: #b3122b;
-            --accent-glow: rgba(255, 42, 75, 0.25);
-            --accent-coop: #10b981;
-            --accent-defect: #ff2a4b;
-            --accent-autonomy: #f59e0b;
-            --accent-info: #3b82f6;
-            --accent-tension: #ec4899;
-            --text-primary: #fdf2f4;
-            --text-secondary: #a38288;
-            --text-muted: #664d52;
+            --bg-color: #000000;
+            --panel-bg: #121212;
+            --panel-border: #262626;
+            --input-bg: #262626;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a8a8a8;
+            --text-muted: #737373;
+            --ig-blue: #0095f6;
+            --ig-gradient: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
+            --font-mono: 'SF Mono', Consolas, monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
 
         body {
-            background-color: #050203;
+            background-color: #0a0a0a;
             color: var(--text-primary);
             font-family: var(--font-sans);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            padding: 12px;
+            padding: 8px;
         }
 
         .app-container {
             width: 100%;
-            max-width: 430px;
-            height: 94vh;
-            max-height: 920px;
+            max-width: 420px;
+            height: 95vh;
+            max-height: 900px;
             background-color: var(--bg-color);
-            border: 2px solid var(--panel-border);
-            border-radius: 40px;
+            border: 1px solid var(--panel-border);
+            border-radius: 36px;
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 20px 50px rgba(255, 42, 75, 0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
             overflow: hidden;
         }
 
+        /* IG Header Style */
         header {
-            padding: 16px 20px 8px 20px;
-            background: linear-gradient(180deg, rgba(24, 13, 14, 0.9) 0%, rgba(13, 6, 7, 0) 100%);
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--panel-border);
             position: relative;
             z-index: 10;
         }
 
-        .title-area h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
-        .title-area p { font-size: 0.72rem; color: var(--accent-red); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-
-        .heart-wrapper {
-            position: relative;
-            width: 40px;
-            height: 40px;
+        .ig-story-ring {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--ig-gradient);
+            padding: 2px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
-        .heart-icon {
-            width: 28px;
-            height: 28px;
-            fill: var(--accent-red);
-            filter: drop-shadow(0 0 6px var(--accent-red));
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-origin: center center;
+        .ig-story-inner {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #fff;
         }
+
+        .title-area h1 { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; color: #fff; }
+        .title-area p { font-size: 0.65rem; color: var(--text-secondary); font-weight: 500; }
 
         .screen {
             display: none;
             flex: 1;
             flex-direction: column;
-            padding: 14px;
+            padding: 12px;
             overflow-y: auto;
-            gap: 12px;
+            gap: 10px;
         }
 
         .screen.active { display: flex; }
@@ -101,44 +105,42 @@
             margin: auto 0;
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
             text-align: center;
         }
-        .login-box h2 { font-size: 1.2rem; color: #fff; }
-        .login-box p { font-size: 0.75rem; color: var(--text-secondary); }
+        .login-box h2 { font-size: 1.2rem; color: #fff; font-weight: 700; }
+        .login-box p { font-size: 0.72rem; color: var(--text-secondary); }
 
         .input-field {
             width: 100%;
-            background: rgba(0,0,0,0.5);
+            background: var(--input-bg);
             border: 1px solid var(--panel-border);
-            padding: 12px 16px;
-            border-radius: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
             color: #fff;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
             outline: none;
             text-align: center;
         }
-        .input-field:focus { border-color: var(--accent-red); }
+        .input-field:focus { border-color: var(--text-secondary); }
 
         .btn-primary {
-            background: var(--accent-red);
+            background: var(--ig-blue);
             color: #fff;
             border: none;
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: 800;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 700;
             font-size: 0.8rem;
             cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: opacity 0.2s;
         }
-        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary:active { opacity: 0.8; }
 
         /* LOBBY */
         .lobby-header {
@@ -147,58 +149,59 @@
             align-items: center;
             background: var(--panel-bg);
             padding: 12px 16px;
-            border-radius: 16px;
+            border-radius: 14px;
             border: 1px solid var(--panel-border);
         }
-        .player-badge { font-size: 0.8rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
-        .status-tag { font-size: 0.65rem; color: var(--accent-coop); font-weight: bold; }
+        .player-badge { font-size: 0.78rem; font-weight: 700; color: #fff; }
+        .status-tag { font-size: 0.6rem; color: #00ffcc; font-weight: bold; }
 
-        .player-list-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-secondary); }
+        .player-list-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
         .player-list { display: flex; flex-direction: column; gap: 8px; }
 
         .player-card {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            border-radius: 14px;
-            padding: 12px;
+            border-radius: 12px;
+            padding: 10px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .player-card .p-name { font-size: 0.85rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
-        .player-card .p-desc { font-size: 0.62rem; color: var(--text-secondary); }
+        .player-card .p-name { font-size: 0.82rem; font-weight: 600; color: #fff; }
+        .player-card .p-desc { font-size: 0.58rem; color: var(--text-secondary); }
 
         .btn-challenge {
-            background: rgba(255, 42, 75, 0.15);
-            border: 1px solid var(--accent-red);
-            color: var(--accent-red);
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
             padding: 6px 12px;
             border-radius: 8px;
-            font-size: 0.7rem;
-            font-weight: 800;
+            font-size: 0.65rem;
+            font-weight: 700;
             cursor: pointer;
         }
+        .btn-challenge:hover { background: rgba(255,255,255,0.1); }
 
-        /* GAMEPLAY */
+        /* GAMEPLAY HUD */
         .turn-progress-container { padding: 0 2px; }
-        .turn-progress-info { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); font-weight: 700; margin-bottom: 4px; }
-        .turn-progress-bar { width: 100%; height: 6px; background: var(--panel-border); border-radius: 3px; overflow: hidden; }
-        .turn-progress-fill { height: 100%; width: 3.33%; background: linear-gradient(90deg, var(--accent-red-dark), var(--accent-red)); transition: width 0.3s ease; }
+        .turn-progress-info { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px; }
+        .turn-progress-bar { width: 100%; height: 4px; background: var(--panel-border); border-radius: 2px; overflow: hidden; }
+        .turn-progress-fill { height: 100%; width: 3.33%; background: var(--ig-gradient); transition: width 0.3s ease; }
 
-        .chart-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-        .chart-box { width: 100%; height: 95px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; position: relative; overflow: hidden; }
+        .chart-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .chart-box { width: 100%; height: 75px; background: rgba(0, 0, 0, 0.5); border-radius: 8px; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; }
 
         .hud-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-        .hud-card { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--panel-border); border-radius: 8px; padding: 4px; text-align: center; }
-        .hud-card .title { font-size: 0.52rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-        .hud-card .value { font-size: 0.75rem; font-family: var(--font-mono); font-weight: 700; margin-top: 1px; }
+        .hud-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--panel-border); border-radius: 6px; padding: 4px; text-align: center; }
+        .hud-card .title { font-size: 0.5rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+        .hud-card .value { font-size: 0.72rem; font-family: var(--font-mono); font-weight: 700; margin-top: 1px; }
 
-        /* CAPAS DE ACCIÓN */
+        /* ACTION TABS & 12-BUTTON GRIDS */
         .layer-tabs {
             display: flex;
             gap: 4px;
-            background: rgba(0,0,0,0.4);
+            background: var(--panel-bg);
             padding: 3px;
             border-radius: 10px;
             border: 1px solid var(--panel-border);
@@ -208,47 +211,56 @@
             background: transparent;
             border: none;
             color: var(--text-secondary);
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-weight: 700;
             padding: 6px 2px;
             border-radius: 8px;
             cursor: pointer;
             text-align: center;
             transition: all 0.2s;
+            text-transform: uppercase;
         }
         .layer-tab.active { background: var(--panel-border); color: #fff; }
 
-        .action-container { display: none; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .action-container { 
+            display: none; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 6px; 
+            max-height: 180px; 
+            overflow-y: auto; 
+            padding-right: 2px;
+        }
         .action-container.active { display: grid; }
 
         .action-btn { 
             background: var(--panel-bg); 
             border: 1px solid var(--panel-border); 
-            border-radius: 12px; 
-            padding: 8px 10px; 
+            border-radius: 10px; 
+            padding: 6px 8px; 
             cursor: pointer; 
             transition: all 0.15s ease; 
             display: flex; 
             flex-direction: column; 
             gap: 2px; 
+            text-align: left;
         }
-        .action-btn:active { transform: scale(0.96); border-color: var(--accent-red); background: var(--accent-glow); }
-        .action-btn.waiting { opacity: 0.5; pointer-events: none; border-color: var(--accent-info); }
-        .action-title { font-size: 0.7rem; font-weight: 700; color: #fff; }
-        .action-badge { font-size: 0.58rem; font-weight: 700; }
-        .action-desc { font-size: 0.58rem; color: var(--text-secondary); line-height: 1.15; }
+        .action-btn:active { transform: scale(0.97); border-color: var(--text-primary); }
+        .action-btn.waiting { opacity: 0.3; pointer-events: none; }
+        .action-title { font-size: 0.65rem; font-weight: 700; color: #fff; }
+        .action-badge { font-size: 0.5rem; font-weight: 600; }
+        .action-desc { font-size: 0.5rem; color: var(--text-secondary); line-height: 1.1; }
 
-        .terminal { background: rgba(0,0,0,0.6); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 8px; font-family: var(--font-mono); font-size: 0.62rem; max-height: 70px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+        .terminal { background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 8px; font-family: var(--font-mono); font-size: 0.58rem; max-height: 55px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
         .log-entry { line-height: 1.2; }
-        .log-turn { color: var(--accent-red); font-weight: bold; }
-        .text-coop { color: var(--accent-coop); }
-        .text-defect { color: var(--accent-defect); }
+        .log-turn { color: var(--ig-blue); font-weight: bold; }
+        .text-vibes { color: #00ffcc; }
+        .text-drama { color: #ff3366; }
 
         /* MODAL */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(13, 6, 7, 0.92);
+            background: rgba(0, 0, 0, 0.9);
             backdrop-filter: blur(8px);
             z-index: 100;
             display: flex;
@@ -265,13 +277,13 @@
 
         .modal-card {
             background: var(--panel-bg);
-            border: 2px solid var(--panel-border);
-            border-radius: 24px;
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
             padding: 24px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             width: 100%;
         }
     </style>
@@ -280,24 +292,25 @@
 
 <div class="app-container">
     <header>
-        <div class="title-area">
-            <h1>Game Theory Lab</h1>
-            <p>Multijugador Real (Supabase)</p>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="ig-story-ring">
+                <div class="ig-story-inner">IG</div>
+            </div>
+            <div class="title-area">
+                <h1>Vibe Check</h1>
+                <p>Game Theory Feed</p>
+            </div>
         </div>
-        <div class="heart-wrapper">
-            <svg class="heart-icon" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-        </div>
+        <div style="font-size: 0.6rem; color: var(--text-muted); font-family: var(--font-mono);">v2.9</div>
     </header>
 
     <!-- 1. LOGIN -->
     <div class="screen active" id="screen-login">
         <div class="login-box">
-            <h2>Acceso Multijugador</h2>
-            <p>Escribe tu alias para buscar o crear una sala con otra persona real.</p>
-            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Jugador_Real_01" maxlength="14" />
-            <button class="btn-primary" onclick="connectToSupabase()">Conectar al Servidor</button>
+            <h2>Log In</h2>
+            <p>Enter your IG handle to connect with another online soul.</p>
+            <input type="text" id="input-player-id" class="input-field" placeholder="@username" maxlength="14" />
+            <button class="btn-primary" onclick="connectToSupabase()">Log In</button>
         </div>
     </div>
 
@@ -305,18 +318,18 @@
     <div class="screen" id="screen-lobby">
         <div class="lobby-header">
             <div>
-                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">JUGADOR</div>
+                <div style="font-size: 0.55rem; color: var(--text-muted); font-weight: bold;">ACCOUNT</div>
                 <div class="player-badge" id="display-my-id">-</div>
             </div>
-            <div class="status-tag" id="connection-status">● CONECTADO</div>
+            <div class="status-tag">● ACTIVE</div>
         </div>
 
-        <div class="player-list-title">Salas / Investigadores en línea</div>
+        <div class="player-list-title">Suggestions For You</div>
         <div class="player-list" id="global-players-list">
             <div class="player-card">
                 <div>
-                    <span class="p-name">Buscando personas...</span>
-                    <div class="p-desc">Comparte tu link con un compañero.</div>
+                    <span class="p-name">Loading feed...</span>
+                    <div class="p-desc">Open another tab or share this link.</div>
                 </div>
             </div>
         </div>
@@ -326,8 +339,8 @@
     <div class="screen" id="screen-game">
         <div class="turn-progress-container">
             <div class="turn-progress-info">
-                <span>VS <span id="lbl-opponent-id" style="color:#fff;">Esperando...</span></span>
-                <span>Turno <span id="lbl-turn-count">1</span> / 30</span>
+                <span>CHATTING WITH <span id="lbl-opponent-id" style="color:#fff;">Connecting...</span></span>
+                <span>Era <span id="lbl-turn-count">1</span> / 30</span>
             </div>
             <div class="turn-progress-bar">
                 <div class="turn-progress-fill" id="turn-progress-fill"></div>
@@ -337,20 +350,20 @@
         <div class="chart-card">
             <div class="hud-grid">
                 <div class="hud-card">
-                    <div class="title">Sinergia</div>
-                    <div class="value" id="val-synergy" style="color:var(--accent-coop);">75%</div>
+                    <div class="title">Vibes</div>
+                    <div class="value" id="val-synergy" style="color:#00ffcc;">75%</div>
                 </div>
                 <div class="hud-card">
-                    <div class="title">Confianza</div>
-                    <div class="value" id="val-trust" style="color:var(--accent-info);">80%</div>
+                    <div class="title">Trust</div>
+                    <div class="value" id="val-trust" style="color:#0095f6;">80%</div>
                 </div>
                 <div class="hud-card">
-                    <div class="title">Autonomía</div>
-                    <div class="value" id="val-solitude" style="color:var(--accent-autonomy);">70%</div>
+                    <div class="title">Sanity</div>
+                    <div class="value" id="val-solitude" style="color:#ffbb00;">70%</div>
                 </div>
                 <div class="hud-card">
-                    <div class="title">Tensión</div>
-                    <div class="value" id="val-tension" style="color:var(--accent-tension);">15%</div>
+                    <div class="title">Drama</div>
+                    <div class="value" id="val-tension" style="color:#ff3366;">15%</div>
                 </div>
             </div>
 
@@ -359,72 +372,221 @@
             </div>
         </div>
 
-        <!-- SELECTOR DE CAPAS -->
+        <!-- TABS FOR 12 BUTTONS EACH -->
         <div class="layer-tabs">
-            <button class="layer-tab active" onclick="switchLayer(1)">1. Vínculo</button>
-            <button class="layer-tab" onclick="switchLayer(2)">2. Conflicto</button>
-            <button class="layer-tab" onclick="switchLayer(3)">3. Espacio</button>
+            <button class="layer-tab active" onclick="switchLayer(1)">1. Rizz (12)</button>
+            <button class="layer-tab" onclick="switchLayer(2)">2. Drama (12)</button>
+            <button class="layer-tab" onclick="switchLayer(3)">3. Coping (12)</button>
         </div>
 
-        <!-- CAPA 1: VÍNCULO -->
+        <!-- LAYER 1: RIZZ (12 buttons) -->
         <div class="action-container active" id="layer-1">
-            <div class="action-btn" onclick="submitMove('dialogue')" id="btn-dialogue">
-                <span class="action-title">Diálogo Abierto</span>
-                <span class="action-badge" style="color:var(--accent-coop)">+Sinergia / -Tensión</span>
-                <span class="action-desc">Fomenta claridad y reduce fricción mutua.</span>
+            <div class="action-btn" onclick="submitMove('dialogue')">
+                <span class="action-title">Spill Tea</span>
+                <span class="action-badge" style="color:#00ffcc">+Vibes / -Drama</span>
+                <span class="action-desc">Pure honest communication clearing the air.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('support')" id="btn-support">
-                <span class="action-title">Apoyo Mutuo</span>
-                <span class="action-badge" style="color:var(--accent-coop)">++Confianza</span>
-                <span class="action-desc">Refuerza el lazo central de la relación.</span>
+            <div class="action-btn" onclick="submitMove('support')">
+                <span class="action-title">Hold It Down</span>
+                <span class="action-badge" style="color:#00ffcc">++W Rizz / Trust</span>
+                <span class="action-desc">Total ride-or-die supportive energy.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('memes')">
+                <span class="action-title">Send Reels</span>
+                <span class="action-badge" style="color:#00ffcc">+Vibes (Low Effort)</span>
+                <span class="action-desc">Share funny reels to keep interaction alive.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('hype')">
+                <span class="action-title">Main Character Praise</span>
+                <span class="action-badge" style="color:#00ffcc">++Vibes Boost</span>
+                <span class="action-desc">Elevate their ego with sincere compliments.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('facetime')">
+                <span class="action-title">Late Night FaceTime</span>
+                <span class="action-badge" style="color:#00ffcc">+Trust / -Sanity</span>
+                <span class="action-desc">Deep vulnerability call until 4 AM.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('matching')">
+                <span class="action-title">Matching Bios</span>
+                <span class="action-badge" style="color:#00ffcc">++Max Commitment</span>
+                <span class="action-desc">Public declaration of supreme alliance.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('story_hint')">
+                <span class="action-title">Story Indirect Hint</span>
+                <span class="action-badge" style="color:#00ffcc">+Vibes / Tease</span>
+                <span class="action-desc">Drop subtle hints specifically for them.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('cute_sticker')">
+                <span class="action-title">Cute Sticker</span>
+                <span class="action-badge" style="color:#00ffcc">+Cute Energy</span>
+                <span class="action-desc">Send cute reaction stickers instantly.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('outfit_comp')">
+                <span class="action-title">Outfit Compliment</span>
+                <span class="action-badge" style="color:#00ffcc">+Rizz Boost</span>
+                <span class="action-desc">Appreciate their flawless outfit photo.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('smooth_flirt')">
+                <span class="action-title">Smooth Flirting</span>
+                <span class="action-badge" style="color:#00ffcc">+Chemistry</span>
+                <span class="action-desc">Keep the romantic tension glowing.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('sudden_confess')">
+                <span class="action-title">Sudden Confession</span>
+                <span class="action-badge" style="color:#00ffcc">High Risk / High Rizz</span>
+                <span class="action-desc">Shoot your shot out of nowhere.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('coord_emojis')">
+                <span class="action-title">Coordinated Emojis</span>
+                <span class="action-badge" style="color:#00ffcc">+Sync Vibe</span>
+                <span class="action-desc">Match their exact emoji energy.</span>
             </div>
         </div>
 
-        <!-- CAPA 2: CONFLICTO -->
+        <!-- LAYER 2: DRAMA (12 buttons) -->
         <div class="action-container" id="layer-2">
-            <div class="action-btn" onclick="submitMove('pressure')" id="btn-pressure">
-                <span class="action-title">Presión Táctica</span>
-                <span class="action-badge" style="color:var(--accent-defect)">+Ventaja / +Tensión</span>
-                <span class="action-desc">Busca beneficio individual elevando el riesgo.</span>
+            <div class="action-btn" onclick="submitMove('pressure')">
+                <span class="action-title">Gaslight / L Ratio</span>
+                <span class="action-badge" style="color:#ff3366">+Clout / +Drama</span>
+                <span class="action-desc">Troll for individual gain, maximum friction.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('defend')" id="btn-defend">
-                <span class="action-title">Contraataque</span>
-                <span class="action-badge" style="color:var(--accent-defect)">Protección</span>
-                <span class="action-desc">Responde a la agresión protegiendo recursos.</span>
+            <div class="action-btn" onclick="submitMove('defend')">
+                <span class="action-title">Block & Delete</span>
+                <span class="action-badge" style="color:#ff3366">Shield Up</span>
+                <span class="action-desc">Call out the bs and protect your peace.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('ghost')">
+                <span class="action-title">Leave on Read</span>
+                <span class="action-badge" style="color:#ff3366">-Trust / Chill Aggression</span>
+                <span class="action-desc">Passive-aggressive silent treatment.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('story_shade')">
+                <span class="action-title">Shade on Story</span>
+                <span class="action-badge" style="color:#ff3366">+Drama / -Trust</span>
+                <span class="action-desc">Passive aggressive public callout.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('flex')">
+                <span class="action-title">Steal Spotlight</span>
+                <span class="action-badge" style="color:#ff3366">-Vibes / One-up</span>
+                <span class="action-desc">Make every achievement about yourself.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('gossip')">
+                <span class="action-title">Rant to Mutuals</span>
+                <span class="action-badge" style="color:#ff3366">High Drama Spike</span>
+                <span class="action-desc">Spreading side gossip behind the scenes.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('ghosting_pro')">
+                <span class="action-title">Pro Ghosting</span>
+                <span class="action-badge" style="color:#ff3366">Disappear 4ever</span>
+                <span class="action-desc">Vanish into thin air without explanation.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('trolling')">
+                <span class="action-title">Feed Trolling</span>
+                <span class="action-badge" style="color:#ff3366">+Chaos / Trolling</span>
+                <span class="action-desc">Post ragebait just to watch them react.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('exposure')">
+                <span class="action-title">Expose Receipts</span>
+                <span class="action-badge" style="color:#ff3366">Max Drama Bomb</span>
+                <span class="action-desc">Bring screenshots into public light.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('silent_treatment')">
+                <span class="action-title">Deep Freeze</span>
+                <span class="action-badge" style="color:#ff3366">Zero Interaction</span>
+                <span class="action-desc">Absolute cold shoulder treatment.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('public_diss')">
+                <span class="action-title">Public Diss Track</span>
+                <span class="action-badge" style="color:#ff3366">Open Beef</span>
+                <span class="action-desc">Direct call out for maximum friction.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('baiting')">
+                <span class="action-title">Subtle Baiting</span>
+                <span class="action-badge" style="color:#ff3366">+Tension Spike</span>
+                <span class="action-desc">Poke the bear to start an argument.</span>
             </div>
         </div>
 
-        <!-- CAPA 3: ESPACIO -->
+        <!-- LAYER 3: COPING (12 buttons) -->
         <div class="action-container" id="layer-3">
-            <div class="action-btn" onclick="submitMove('autonomy')" id="btn-autonomy">
-                <span class="action-title">Pausa Activa</span>
-                <span class="action-badge" style="color:var(--accent-autonomy)">++Autonomía</span>
-                <span class="action-desc">Recarga espacio personal y calma el sistema.</span>
+            <div class="action-btn" onclick="submitMove('autonomy')">
+                <span class="action-title">Touch Grass</span>
+                <span class="action-badge" style="color:#ffbb00">++Sanity</span>
+                <span class="action-desc">Step offline, reset personal boundaries.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('mirror')" id="btn-mirror">
-                <span class="action-title">Eco Espejo</span>
-                <span class="action-badge" style="color:var(--accent-info)">Adaptativo</span>
-                <span class="action-desc">Replica la última jugada ejecutada por el rival.</span>
+            <div class="action-btn" onclick="submitMove('mirror')">
+                <span class="action-title">NPC Mimic</span>
+                <span class="action-badge" style="color:#0095f6">Copycat Mode</span>
+                <span class="action-desc">Blindly mirror whatever your opponent just did.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('mute')">
+                <span class="action-title">Mute Notifications</span>
+                <span class="action-badge" style="color:#ffbb00">+Sanity / Slow Pace</span>
+                <span class="action-desc">Temporary digital detox without blocking.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('alt_mode')">
+                <span class="action-title">Alt Account Stealth</span>
+                <span class="action-badge" style="color:#ffbb00">+Sanity / Lurking</span>
+                <span class="action-desc">Observe safely from a burner account.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('block')">
+                <span class="action-title">Hard Reset</span>
+                <span class="action-badge" style="color:#ffbb00">Cut Ties / Soft Exit</span>
+                <span class="action-desc">Clear boundaries to prevent system collapse.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('doomscroll')">
+                <span class="action-title">Doomscrolling</span>
+                <span class="action-badge" style="color:#ff3366">-Sanity / -Vibes</span>
+                <span class="action-desc">Numb out mindlessly scrolling feeds.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('read_receipts_off')">
+                <span class="action-title">Turn Off Read Receipts</span>
+                <span class="action-badge" style="color:#ffbb00">+Stealth / Sanity</span>
+                <span class="action-desc">Hide read status to avoid pressure.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('temp_block')">
+                <span class="action-title">Temporary Block</span>
+                <span class="action-badge" style="color:#ffbb00">24h Safe Break</span>
+                <span class="action-desc">Temporary cool down lock.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('sad_playlist')">
+                <span class="action-title">Sad Playlist</span>
+                <span class="action-badge" style="color:#ffbb00">Melancholy Vibe</span>
+                <span class="action-desc">Sad songs loop for emotional processing.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('airplane_mode')">
+                <span class="action-title">Airplane Mode</span>
+                <span class="action-badge" style="color:#ffbb00">Total Isolation</span>
+                <span class="action-desc">Cut off all digital connectivity.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('zen_reflex')">
+                <span class="action-title">Zen Reflection</span>
+                <span class="action-badge" style="color:#ffbb00">+Inner Peace</span>
+                <span class="action-desc">Meditate to restore complete balance.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('coffee_silence')">
+                <span class="action-title">Coffee & Silence</span>
+                <span class="action-badge" style="color:#ffbb00">+Sanity Recovery</span>
+                <span class="action-desc">Disconnect in a local coffee shop.</span>
             </div>
         </div>
 
         <div class="terminal" id="console-log">
-            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Esperando elección del oponente...</div>
+            <div class="log-entry"><span class="log-turn">[SYSTEM]</span> Waiting on opponent's move...</div>
         </div>
     </div>
 
-    <!-- OVERLAY RESULTADO -->
+    <!-- RESULT OVERLAY -->
     <div class="modal-overlay" id="resultOverlay">
         <div class="modal-card">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #fff;" id="resTitle">Fin de la Simulación</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="resSubtitle">Evaluando métricas de estabilidad...</div>
-            <button class="btn-primary" style="width:100%;" onclick="returnToLobby()">Volver al Lobby</button>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #fff;" id="resTitle">Simulation Complete</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);" id="resSubtitle">Vibe analysis finalized...</div>
+            <button class="btn-primary" style="width:100%;" onclick="returnToLobby()">Back to Feed</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- CREDENCIALES CONFIGURADAS ---
     const SUPABASE_URL = 'https://lakyqsieafcwoetyvxgd.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_EkrRy2F39M3FXaDAq8NlFg_3lIPMyFS';
 
@@ -447,6 +609,15 @@
     const canvas = document.getElementById('payoffChart');
     const ctx = canvas.getContext('2d');
 
+    const dramaMoves = [
+        'pressure', 'ghost', 'story_shade', 'flex', 'gossip', 
+        'ghosting_pro', 'trolling', 'exposure', 'silent_treatment', 'public_diss', 'baiting'
+    ];
+    const copingMoves = [
+        'autonomy', 'mirror', 'mute', 'alt_mode', 'block', 'doomscroll',
+        'read_receipts_off', 'temp_block', 'sad_playlist', 'airplane_mode', 'zen_reflex', 'coffee_silence'
+    ];
+
     function switchScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
@@ -463,10 +634,10 @@
     function connectToSupabase() {
         const input = document.getElementById('input-player-id').value.trim();
         if (!input) {
-            alert("Por favor escribe tu alias.");
+            alert("Drop a valid username first bestie.");
             return;
         }
-        myPlayerId = input;
+        myPlayerId = input.startsWith('@') ? input : '@' + input;
         document.getElementById('display-my-id').innerText = myPlayerId;
 
         try {
@@ -474,7 +645,7 @@
             initGlobalLobby();
             switchScreen('screen-lobby');
         } catch (e) {
-            alert("Error al conectar con Supabase. Revisa tus credenciales.");
+            alert("Connection error. Check your credentials.");
             console.error(e);
         }
     }
@@ -498,7 +669,7 @@
         supabaseClient.channel(`invite:${myPlayerId}`)
             .on('broadcast', { event: 'challenge' }, payload => {
                 const { fromRoom, challengerName } = payload.payload;
-                if (confirm(`¡${challengerName} te ha retado a una sesión! ¿Aceptar?`)) {
+                if (confirm(`💥 ${challengerName} invited you to a vibe check session! Accept?`)) {
                     joinRoom(fromRoom, challengerName);
                 }
             })
@@ -516,8 +687,8 @@
             listContainer.innerHTML = `
                 <div class="player-card">
                     <div>
-                        <span class="p-name">Estás solo en el servidor</span>
-                        <div class="p-desc">Abre otra pestaña o dale tu enlace a un compañero.</div>
+                        <span class="p-name">No accounts active right now</span>
+                        <div class="p-desc">Open a second tab or share the URL.</div>
                     </div>
                 </div>`;
             return;
@@ -529,9 +700,9 @@
             card.innerHTML = `
                 <div>
                     <span class="p-name">${pName}</span>
-                    <div class="p-desc">Disponible para sesión conectada.</div>
+                    <div class="p-desc">Ready for connection.</div>
                 </div>
-                <button class="btn-challenge" onclick="challengePlayer('${pName}')">Desafiar</button>
+                <button class="btn-challenge" onclick="challengePlayer('${pName}')">Message</button>
             `;
             listContainer.appendChild(card);
         });
@@ -550,7 +721,7 @@
         setupGameRoom();
         switchScreen('screen-game');
         document.getElementById('lbl-opponent-id').innerText = opponentId;
-        logConsole(`<span class="log-turn">[SISTEMA]</span> Reto enviado a ${targetName}. Esperando respuesta...`);
+        logConsole(`<span class="log-turn">[SYSTEM]</span> Message sent to ${targetName}. Waiting for response...`);
     }
 
     function joinRoom(targetRoomId, hostName) {
@@ -559,7 +730,7 @@
         setupGameRoom();
         switchScreen('screen-game');
         document.getElementById('lbl-opponent-id').innerText = opponentId;
-        logConsole(`<span class="log-turn">[SISTEMA]</span> Conectado con éxito a la sesión de ${hostName}.`);
+        logConsole(`<span class="log-turn">[SYSTEM]</span> Connected to session with ${hostName}!`);
     }
 
     function setupGameRoom() {
@@ -585,13 +756,16 @@
 
         gameState.myCurrentMove = move;
         lockActionButtons(true);
-        logConsole(`<span class="log-turn">[T${gameState.turn}]</span> Has elegido tu jugada. Esperando al rival...`);
+        logConsole(`<span class="log-turn">[E${gameState.turn}]</span> Move locked. Waiting on opponent...`);
 
         roomChannel.send({
             type: 'broadcast',
             event: 'player_move',
             payload: { player: myPlayerId, move: move }
         });
+
+        // Check immediately in case opponent move arrived earlier
+        checkTurnCompletion();
     }
 
     function checkTurnCompletion() {
@@ -610,27 +784,35 @@
         let dSynergy = 0, dTrust = 0, dSolitude = 0, dTension = 0;
         let logMsg = "";
 
+        let p1IsDrama = dramaMoves.includes(actualP1);
+        let p2IsDrama = dramaMoves.includes(actualP2);
+        let p1IsCoping = copingMoves.includes(actualP1);
+        let p2IsCoping = copingMoves.includes(actualP2);
+
         if (actualP1 === 'dialogue' && actualP2 === 'dialogue') {
             dSynergy = 8; dTrust = 6; dTension = -10;
-            logMsg = `<span class="text-coop">Sintonía Mutua:</span> Ambos dialogaron (-Tensión).`;
+            logMsg = `<span class="text-vibes">W Rizz:</span> Both spilled tea successfully (-Drama).`;
         } else if (actualP1 === 'support' && actualP2 === 'support') {
             dSynergy = 12; dTrust = 10; dTension = -5;
-            logMsg = `<span class="text-coop">Simbiosis Total:</span> Apoyo conjunto masivo.`;
-        } else if (actualP1 === 'pressure' && actualP2 !== 'pressure') {
-            dSynergy = -5; dTrust = -15; dTension = 20;
-            logMsg = `<span class="text-defect">Presión Aplicada:</span> Presionaste y desestabilizaste al rival.`;
-        } else if (actualP1 !== 'pressure' && actualP2 === 'pressure') {
-            dSynergy = -5; dTrust = -15; dTension = 20;
-            logMsg = `<span class="text-defect">Aprovechamiento:</span> El rival te presionó en este turno.`;
-        } else if (actualP1 === 'pressure' && actualP2 === 'pressure') {
-            dSynergy = -20; dTrust = -25; dTension = 35;
-            logMsg = `<span class="text-defect">Choque Directo:</span> Presión mutua (Alta Tensión).`;
-        } else if (actualP1 === 'autonomy' || actualP2 === 'autonomy') {
-            dSolitude = 15; dTension = -15; dTrust = 2;
-            logMsg = `<span>Respiro Estructural:</span> Pausa activa ejecutada.`;
+            logMsg = `<span class="text-vibes">Ride or Die:</span> Maximum mutual backing achieved.`;
+        } else if (actualP1 === 'memes' && actualP2 === 'memes') {
+            dSynergy = 6; dTrust = 4; dTension = -4;
+            logMsg = `<span class="text-vibes">Reel Exchange:</span> Low-key wholesome bonding.`;
+        } else if (p1IsDrama && !p2IsDrama && !p2IsCoping) {
+            dSynergy = -6; dTrust = -15; dTension = 22;
+            logMsg = `<span class="text-drama">Power Move:</span> You brought drama and pressured the rival.`;
+        } else if (!p1IsDrama && !p1IsCoping && p2IsDrama) {
+            dSynergy = -6; dTrust = -15; dTension = 22;
+            logMsg = `<span class="text-drama">Struck by Drama:</span> Rival hit you with a toxic play.`;
+        } else if (p1IsDrama && p2IsDrama) {
+            dSynergy = -22; dTrust = -28; dTension = 38;
+            logMsg = `<span class="text-drama">Clash of Egos:</span> Toxic feedback loop. Massive drama spike!`;
+        } else if (p1IsCoping || p2IsCoping) {
+            dSolitude = 14; dTension = -12; dTrust = 1;
+            logMsg = `<span>Detox Mode:</span> Boundaries established, peace restored.`;
         } else {
-            dSynergy = 2; dTrust = 3; dTension = 5;
-            logMsg = `<span>Interacción Cruzada:</span> Intercambio de capas completado.`;
+            dSynergy = 8; dTrust = 7; dTension = -4;
+            logMsg = `<span class="text-vibes">Synergy:</span> Solid interactions building alignment.`;
         }
 
         gameState.synergy = Math.max(0, Math.min(100, gameState.synergy + dSynergy));
@@ -645,7 +827,7 @@
         gameState.history.trust.push(gameState.trust);
         gameState.history.tension.push(gameState.tension);
 
-        logConsole(`<span class="log-turn">T${gameState.turn}:</span> ${logMsg}`);
+        logConsole(`<span class="log-turn">E${gameState.turn}:</span> ${logMsg}`);
 
         if (gameState.trust <= 0 || gameState.tension >= 100 || gameState.turn >= MAX_TURNS) {
             evaluarPuntoFinalDeRelacion();
@@ -672,17 +854,17 @@
         let descFinal = "";
 
         if (gameState.tension >= 100) {
-            tituloFinal = "💥 COLAPSO POR TENSIÓN";
-            descFinal = "El sistema acumuló demasiada fricción.";
+            tituloFinal = "💥 FULL CANCELATION COLLAPSE";
+            descFinal = "Too much drama. The timeline completely burned down.";
         } else if (gameState.trust <= 0) {
-            tituloFinal = "💔 QUIEBRE DE CONFIANZA";
-            descFinal = "La confianza se desvaneció por completo.";
+            tituloFinal = "💔 UNFRIENDED & BLOCKED";
+            descFinal = "Total betrayal arc. Zero trust remaining.";
         } else if (gameState.synergy >= 85 && gameState.tension < 20) {
-            tituloFinal = "🌟 ARMONÍA MULTICAPA";
-            descFinal = "Diseño estructural óptimo alcanzado entre ambos.";
+            tituloFinal = "🌟 GOATED DUO ENERGY";
+            descFinal = "Absolute pinnacle of harmonious synchronization.";
         } else {
-            tituloFinal = "⚖️ EQUILIBRIO COMPLEJO";
-            descFinal = "Ciclo de 30 turnos completado con éxito.";
+            tituloFinal = "⚖️ CHRONICALLY ONLINE EQUILIBRIUM";
+            descFinal = "30 eras survived. Perfectly mid outcome.";
         }
 
         document.getElementById('resTitle').innerText = tituloFinal;
@@ -715,7 +897,7 @@
             gameOver: false
         };
         updateHUD();
-        document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SISTEMA]</span> Conectados en sala de sesión. Elige tu jugada.</div>`;
+        document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SYSTEM]</span> Feed loaded. Pick your move.</div>`;
     }
 
     function logConsole(msg) {
@@ -734,7 +916,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         let pad = 6, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
         
-        ctx.strokeStyle = '#261114';
+        ctx.strokeStyle = '#262626';
         ctx.lineWidth = 1;
         ctx.beginPath();
         for(let i=0; i<=3; i++) {
@@ -743,9 +925,9 @@
         }
         ctx.stroke();
 
-        drawLine(gameState.history.synergy, '#10b981');
-        drawLine(gameState.history.trust, '#3b82f6');
-        drawLine(gameState.history.tension, '#ec4899');
+        drawLine(gameState.history.synergy, '#00ffcc');
+        drawLine(gameState.history.trust, '#0095f6');
+        drawLine(gameState.history.tension, '#ff3366');
     }
 
     function drawLine(data, color) {
