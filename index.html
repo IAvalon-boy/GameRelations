@@ -1,794 +1,250 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Theory Mobile - Realtime Multiplayer</title>
-    <!-- Supabase JS Client v2 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --bg-color: #0d0607;
-            --panel-bg: #180d0e;
-            --panel-border: #331518;
-            --accent-red: #ff2a4b;
-            --accent-red-dark: #b3122b;
-            --accent-glow: rgba(255, 42, 75, 0.25);
-            --accent-coop: #10b981;
-            --accent-defect: #ff2a4b;
-            --accent-autonomy: #f59e0b;
-            --accent-info: #3b82f6;
-            --text-primary: #fdf2f4;
-            --text-secondary: #a38288;
-            --text-muted: #664d52;
-            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
+import streamlit as st
+import time
+import textwrap
+from deep_translator import GoogleTranslator
+from collections import Counter
+import io
+import os
+import requests
+import PyPDF2
+from fpdf import FPDF
+from PIL import Image, ImageDraw
 
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+# ==========================================
+# CONFIGURACIÓN DE SUPABASE
+# ==========================================
+SUPABASE_URL = "https://ausdkdeqpwiksgytgkte.supabase.co/rest/v1/"
+SUPABASE_KEY = "sb_publishable_QP2QBGFw7i2NLHQ3uihZLQ_444lil0G"
 
-        body {
-            background-color: #050203;
-            color: var(--text-primary);
-            font-family: var(--font-sans);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 12px;
-        }
+def save_translation_to_supabase(filename, source_lang, target_lang, pi_coord):
+    """Envía un registro de la traducción a la base de datos de Supabase vía REST API"""
+    endpoint = f"{SUPABASE_URL}translations"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
+    payload = {
+        "filename": filename,
+        "source_lang": source_lang,
+        "target_lang": target_lang,
+        "pi_coordinate": str(pi_coord)
+    }
+    try:
+        response = requests.post(endpoint, json=payload, headers=headers, timeout=5)
+        return response.status_code in [200, 201]
+    except Exception:
+        return False
 
-        /* Frame Móvil */
-        .app-container {
-            width: 100%;
-            max-width: 430px;
-            height: 92vh;
-            max-height: 880px;
-            background-color: var(--bg-color);
-            border: 2px solid var(--panel-border);
-            border-radius: 40px;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            box-shadow: 0 20px 50px rgba(255, 42, 75, 0.15);
-            overflow: hidden;
-        }
+# ==========================================
+# CONFIGURACIÓN DE LA PÁGINA
+# ==========================================
+st.set_page_config(page_title="La Biblioteca de Babel", page_icon="📚", layout="wide")
 
-        header {
-            padding: 16px 20px 8px 20px;
-            background: linear-gradient(180deg, rgba(24, 13, 14, 0.9) 0%, rgba(13, 6, 7, 0) 100%);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            z-index: 10;
-        }
+st.markdown("""
+<style>
+    .stApp { background-color: #08090c; color: #d1d5db; }
+    .neon-text { color: #ffb703; font-family: monospace; letter-spacing: 2px; text-transform: uppercase; text-align: center;}
+    .magenta-text { color: #ff0055; font-weight: bold; text-align: center; }
+</style>
+""", unsafe_allow_html=True)
 
-        .title-area h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
-        .title-area p { font-size: 0.72rem; color: var(--accent-red); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+# ==========================================
+# LÓGICA MATEMÁTICA Y DE NIBBLES
+# ==========================================
+def calculate_pi_coordinate(text):
+    seed = 0
+    sample_text = text[:50000] + str(len(text)) 
+    for char in sample_text:
+        seed = (seed * 33 + ord(char)) % 1000000007
+    pi_offset = (seed * 104729) % 999999999999
+    return pi_offset
 
-        .heart-wrapper {
-            position: relative;
-            width: 44px;
-            height: 44px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 20;
-        }
+def generate_nibble_entropy(text):
+    nibbles = []
+    sample = text[:5000]
+    for char in sample:
+        full_bin = format(ord(char), '08b')
+        nibbles.extend([full_bin[:4], full_bin[4:]])
+    return Counter(nibbles).most_common(8)
 
-        .heart-icon {
-            width: 32px;
-            height: 32px;
-            fill: var(--accent-red);
-            filter: drop-shadow(0 0 6px var(--accent-red));
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            transform-origin: center center;
-        }
-
-        .screen {
-            display: none;
-            flex: 1;
-            flex-direction: column;
-            padding: 16px;
-            overflow-y: auto;
-            gap: 14px;
-        }
-
-        .screen.active { display: flex; }
-
-        /* 1. LOGIN SCREEN */
-        .login-box {
-            margin: auto 0;
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 24px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            text-align: center;
-        }
-
-        .login-box h2 { font-size: 1.2rem; color: #fff; }
-        .login-box p { font-size: 0.75rem; color: var(--text-secondary); }
-
-        .input-field {
-            width: 100%;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid var(--panel-border);
-            padding: 12px 16px;
-            border-radius: 12px;
-            color: #fff;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            outline: none;
-            text-align: center;
-        }
-        .input-field:focus { border-color: var(--accent-red); }
-
-        .btn-primary {
-            background: var(--accent-red);
-            color: #fff;
-            border: none;
-            padding: 12px;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 0.8rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            box-shadow: 0 4px 15px var(--accent-glow);
-        }
-        .btn-primary:active { transform: scale(0.97); }
-
-        /* 2. LOBBY SCREEN */
-        .lobby-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--panel-bg);
-            padding: 12px 16px;
-            border-radius: 16px;
-            border: 1px solid var(--panel-border);
-        }
-
-        .player-badge { font-size: 0.8rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
-        .status-tag { font-size: 0.65rem; color: var(--accent-coop); font-weight: bold; }
-
-        .player-list-title {
-            font-size: 0.7rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-
-        .player-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .player-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 14px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .player-card .p-name { font-size: 0.85rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
-        .btn-challenge {
-            background: rgba(255, 42, 75, 0.15);
-            border: 1px solid var(--accent-red);
-            color: var(--accent-red);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 0.7rem;
-            font-weight: 800;
-            cursor: pointer;
-        }
-        .btn-challenge:active { background: var(--accent-red); color: #fff; }
-
-        /* 3. GAMEPLAY SCREEN */
-        .turn-progress-container { padding: 0 4px 4px 4px; }
-        .turn-progress-info { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); font-weight: 700; margin-bottom: 4px; }
-        .turn-progress-bar { width: 100%; height: 6px; background: var(--panel-border); border-radius: 3px; overflow: hidden; }
-        .turn-progress-fill { height: 100%; width: 3.33%; background: linear-gradient(90deg, var(--accent-red-dark), var(--accent-red)); transition: width 0.3s ease; }
-
-        .chart-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .chart-box { width: 100%; height: 120px; background: rgba(0, 0, 0, 0.4); border-radius: 12px; position: relative; overflow: hidden; }
-        canvas { width: 100%; height: 100%; }
-
-        .hud-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .hud-card { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 4px; text-align: center; }
-        .hud-card .title { font-size: 0.58rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-        .hud-card .value { font-size: 0.82rem; font-family: var(--font-mono); font-weight: 700; margin-top: 2px; }
-
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .action-btn { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 3px; }
-        .action-btn:active { transform: scale(0.96); border-color: var(--accent-red); background: var(--accent-glow); }
-        .action-btn.selected { border-color: var(--accent-coop); background: rgba(16, 185, 129, 0.15); }
-        .action-btn.disabled { opacity: 0.4; pointer-events: none; }
-
-        .action-title { font-size: 0.75rem; font-weight: 700; color: #fff; }
-        .action-badge { font-size: 0.62rem; font-weight: 700; }
-        .action-desc { font-size: 0.62rem; color: var(--text-secondary); line-height: 1.2; }
-
-        .terminal { background: rgba(0,0,0,0.6); border: 1px solid var(--panel-border); border-radius: 12px; padding: 8px 10px; font-family: var(--font-mono); font-size: 0.66rem; max-height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-        .log-entry { line-height: 1.3; }
-        .log-turn { color: var(--accent-red); font-weight: bold; }
-        .text-coop { color: var(--accent-coop); }
-        .text-defect { color: var(--accent-defect); }
-
-        /* MODALES Y OVERLAYS */
-        .modal-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(13, 6, 7, 0.92);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 30px;
-            text-align: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-
-        .modal-card {
-            background: var(--panel-bg);
-            border: 2px solid var(--panel-border);
-            border-radius: 24px;
-            padding: 24px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 14px;
-            width: 100%;
-        }
-
-        .modal-buttons { display: flex; gap: 10px; width: 100%; }
-        .btn-sec { background: transparent; border: 1px solid var(--panel-border); color: var(--text-secondary); padding: 10px; border-radius: 12px; font-weight: 700; flex: 1; cursor: pointer; }
-    </style>
-</head>
-<body>
-
-<div class="app-container">
-    <header>
-        <div class="title-area">
-            <h1>Game Theory Lab</h1>
-            <p id="header-subtitle">Multiplayer Engine</p>
-        </div>
-        <div class="heart-wrapper">
-            <svg class="heart-icon" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-        </div>
-    </header>
-
-    <!-- 1. PANTALLA LOGIN -->
-    <div class="screen active" id="screen-login">
-        <div class="login-box">
-            <h2>Ingresar a la Red</h2>
-            <p>Escribe tu ID / Nombre de usuario para buscar oponentes en línea.</p>
-            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Player_01" maxlength="12" />
-            <button class="btn-primary" onclick="connectToLobby()">Conectar</button>
-        </div>
-    </div>
-
-    <!-- 2. PANTALLA LOBBY -->
-    <div class="screen" id="screen-lobby">
-        <div class="lobby-header">
-            <div>
-                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">CONECTADO COMO</div>
-                <div class="player-badge" id="display-my-id">Jugador</div>
-            </div>
-            <div class="status-tag" id="status-tag-indicator">● EN LÍNEA</div>
-        </div>
-
-        <div class="player-list-title">Jugadores Disponibles</div>
-        <div class="player-list" id="player-list-container">
-            <!-- Cargado dinámicamente -->
-        </div>
-    </div>
-
-    <!-- 3. PANTALLA DE JUEGO -->
-    <div class="screen" id="screen-game">
-        <div class="turn-progress-container">
-            <div class="turn-progress-info">
-                <span>VS <span id="lbl-opponent-id" style="color:#fff;">Rival</span></span>
-                <span>Turno <span id="lbl-turn-count">1</span> / 30</span>
-            </div>
-            <div class="turn-progress-bar">
-                <div class="turn-progress-fill" id="turn-progress-fill"></div>
-            </div>
-        </div>
-
-        <div class="chart-card">
-            <div class="hud-grid">
-                <div class="hud-card">
-                    <div class="title">Sinergia</div>
-                    <div class="value" id="val-synergy" style="color:var(--accent-coop);">75%</div>
-                </div>
-                <div class="hud-card">
-                    <div class="title">Confianza</div>
-                    <div class="value" id="val-trust" style="color:var(--accent-info);">80%</div>
-                </div>
-                <div class="hud-card">
-                    <div class="title">Autonomía</div>
-                    <div class="value" id="val-solitude" style="color:var(--accent-autonomy);">70%</div>
-                </div>
-                <div class="hud-card">
-                    <div class="title">Estado</div>
-                    <div class="value" id="val-state" style="font-size:0.6rem; color:var(--accent-coop);">ESTABLE</div>
-                </div>
-            </div>
-
-            <div class="chart-box">
-                <canvas id="payoffChart"></canvas>
-            </div>
-        </div>
-
-        <div class="action-grid" id="actionGrid">
-            <div class="action-btn" id="btn-coop" onclick="submitMove('cooperate')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Cooperar</span>
-                    <span class="action-badge" style="color:var(--accent-coop)">+Sinergia</span>
-                </div>
-                <div class="action-desc">Suma beneficio mutuo si se mantiene la confianza.</div>
-            </div>
-
-            <div class="action-btn" id="btn-betray" onclick="submitMove('betray')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Traicionar</span>
-                    <span class="action-badge" style="color:var(--accent-defect)">Riesgo</span>
-                </div>
-                <div class="action-desc">Ventaja individual a costa de romper la confianza.</div>
-            </div>
-
-            <div class="action-btn" id="btn-autonomy" onclick="submitMove('solitude')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Autonomía</span>
-                    <span class="action-badge" style="color:var(--accent-autonomy)">+Recarga</span>
-                </div>
-                <div class="action-desc">Espacio personal para evitar saturación.</div>
-            </div>
-
-            <div class="action-btn" id="btn-titfortat" onclick="submitMove('tit-for-tat')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Recíproco</span>
-                    <span class="action-badge" style="color:var(--accent-info)">Espejo</span>
-                </div>
-                <div class="action-desc">Replica la jugada anterior del rival.</div>
-            </div>
-        </div>
-
-        <div class="terminal" id="console-log">
-            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Partida iniciada. Elige tu jugada.</div>
-        </div>
-    </div>
-
-    <!-- MODAL SOLICITUD DE DESAFÍO -->
-    <div class="modal-overlay" id="challengeModal">
-        <div class="modal-card">
-            <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">¡Desafío Recibido!</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="challengeModalText">Un jugador te ha invitado a jugar.</div>
-            <div class="modal-buttons">
-                <button class="btn-sec" onclick="respondChallenge(false)">Rechazar</button>
-                <button class="btn-primary" style="flex:1;" onclick="respondChallenge(true)">Aceptar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- OVERLAY RESULTADO / PUNTO DE EQUILIBRIO -->
-    <div class="modal-overlay" id="resultOverlay">
-        <div class="modal-card">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #fff;" id="resTitle">Fin de la Partida</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="resSubtitle">Evaluando punto final de la relación...</div>
-            <button class="btn-primary" style="width:100%;" onclick="returnToLobby()">Volver al Lobby</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    // CREDENCIALES DE SUPABASE INTEGRADAS
-    const SUPABASE_URL = 'https://ausdkdeqpwiksgytgkte.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_QP2QBGFw7i2NLHQ3uihZLQ_444lil0G';
+# ==========================================
+# MOTOR DE TRADUCCIÓN (CHUNKING)
+# ==========================================
+def translate_book(text, source_lang, target_lang, chunk_size=3000):
+    chunks = textwrap.wrap(text, chunk_size, break_long_words=False, replace_whitespace=False)
+    translated_chunks = []
     
-    let supabase = null;
-    let isOnlineMode = false;
-
-    if (SUPABASE_URL.indexOf('YOUR-SUPABASE') === -1 && window.supabase) {
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            isOnlineMode = true;
-        } catch(e) { console.error("Error cargando Supabase:", e); }
-    }
-
-    const MAX_TURNS = 30;
-    let myPlayerId = "";
-    let opponentId = "";
-    let gameRoomId = "";
-    let lobbyChannel = null;
-    let gameChannel = null;
-    let pendingChallenger = null;
-
-    let gameState = {
-        turn: 1, synergy: 75, trust: 80, solitude: 70,
-        history: { synergy: [75], trust: [80] },
-        myMove: null, opponentMove: null,
-        myLastMove: 'cooperate', opponentLastMove: 'cooperate',
-        gameOver: false
-    };
-
-    const canvas = document.getElementById('payoffChart');
-    const ctx = canvas.getContext('2d');
-
-    function switchScreen(screenId) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById(screenId).classList.add('active');
-        if (screenId === 'screen-game') {
-            setTimeout(resizeCanvas, 100);
-        }
-    }
-
-    // CONEXIÓN Y LOBBY EN TIEMPO REAL
-    function connectToLobby() {
-        const input = document.getElementById('input-player-id').value.trim();
-        if (!input) {
-            alert("Por favor escribe un ID de jugador.");
-            return;
-        }
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    translator = GoogleTranslator(source=source_lang, target=target_lang)
+    
+    for i, chunk in enumerate(chunks):
+        status_text.text(f"Traduciendo sector {i+1} de {len(chunks)}...")
+        try:
+            translation = translator.translate(chunk)
+            translated_chunks.append(translation)
+        except Exception as e:
+            translated_chunks.append(f"\n[ERROR: {e}]\n")
         
-        myPlayerId = input;
-        document.getElementById('display-my-id').innerText = myPlayerId;
-        switchScreen('screen-lobby');
-
-        if (!isOnlineMode) {
-            document.getElementById('status-tag-indicator').innerText = '● MODO MOCK/DEMO';
-            document.getElementById('status-tag-indicator').style.color = 'var(--accent-autonomy)';
-            mockLobbyUsers();
-            return;
-        }
-
-        lobbyChannel = supabase.channel('lobby-presence', {
-            config: { presence: { key: myPlayerId } }
-        });
-
-        lobbyChannel
-            .on('presence', { event: 'sync' }, () => {
-                const state = lobbyChannel.presenceState();
-                renderLobbyPlayers(state);
-            })
-            .on('broadcast', { event: 'challenge_received' }, (payload) => {
-                if (payload.payload.targetId === myPlayerId) {
-                    pendingChallenger = payload.payload.fromId;
-                    document.getElementById('challengeModalText').innerText = `${pendingChallenger} te ha desafiado a una partida.`;
-                    document.getElementById('challengeModal').classList.add('active');
-                }
-            })
-            .on('broadcast', { event: 'challenge_response' }, (payload) => {
-                if (payload.payload.targetId === myPlayerId) {
-                    if (payload.payload.accepted) {
-                        startMultiplayerGame(payload.payload.fromId, payload.payload.roomId);
-                    } else {
-                        alert(`${payload.payload.fromId} rechazó la solicitud.`);
-                    }
-                }
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'available' });
-                }
-            });
-    }
-
-    function renderLobbyPlayers(presenceState) {
-        const container = document.getElementById('player-list-container');
-        container.innerHTML = "";
-
-        Object.keys(presenceState).forEach(id => {
-            if (id === myPlayerId) return;
-
-            const userPresence = presenceState[id][0];
-            const isAvailable = userPresence && userPresence.status === 'available';
-
-            const card = document.createElement('div');
-            card.className = 'player-card';
-            card.innerHTML = `
-                <span class="p-name">${id}</span>
-                <button class="btn-challenge" ${!isAvailable ? 'disabled' : ''} onclick="sendChallenge('${id}')">
-                    ${isAvailable ? 'Desafiar' : 'En juego'}
-                </button>
-            `;
-            container.appendChild(card);
-        });
-
-        if (container.children.length === 0) {
-            container.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:20px;">Esperando otros jugadores online...</div>`;
-        }
-    }
-
-    function sendChallenge(targetId) {
-        if (!isOnlineMode) {
-            startMultiplayerGame(targetId, 'demo_room');
-            return;
-        }
-
-        const roomId = `room_${myPlayerId}_${targetId}`;
-        lobbyChannel.send({
-            type: 'broadcast',
-            event: 'challenge_received',
-            payload: { fromId: myPlayerId, targetId: targetId, roomId: roomId }
-        });
-        alert(`Desafío enviado a ${targetId}. Esperando confirmación...`);
-    }
-
-    function respondChallenge(accepted) {
-        document.getElementById('challengeModal').classList.remove('active');
-        const roomId = `room_${pendingChallenger}_${myPlayerId}`;
-
-        if (isOnlineMode) {
-            lobbyChannel.send({
-                type: 'broadcast',
-                event: 'challenge_response',
-                payload: { fromId: myPlayerId, targetId: pendingChallenger, accepted: accepted, roomId: roomId }
-            });
-        }
-
-        if (accepted) {
-            startMultiplayerGame(pendingChallenger, roomId);
-        }
-    }
-
-    // INICIO DE SALA SINCRONIZADA
-    async function startMultiplayerGame(targetId, roomId) {
-        opponentId = targetId;
-        gameRoomId = roomId;
-
-        if (isOnlineMode && lobbyChannel) {
-            await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'busy' });
-        }
-
-        document.getElementById('lbl-opponent-id').innerText = opponentId;
-        resetGameState();
-        switchScreen('screen-game');
-
-        if (!isOnlineMode) return;
-
-        gameChannel = supabase.channel(gameRoomId);
-        gameChannel
-            .on('broadcast', { event: 'turn_move' }, (payload) => {
-                if (payload.payload.fromId === opponentId) {
-                    gameState.opponentMove = payload.payload.move;
-                    checkBothMovesSubmitted();
-                }
-            })
-            .subscribe();
-    }
-
-    function submitMove(move) {
-        if (gameState.gameOver || gameState.myMove !== null) return;
-
-        gameState.myMove = move;
+        progress_bar.progress((i + 1) / len(chunks))
+        time.sleep(0.5) 
         
-        document.querySelectorAll('.action-btn').forEach(b => b.classList.add('disabled'));
+    status_text.empty()
+    progress_bar.empty()
+    return "\n\n".join(translated_chunks)
 
-        logConsole(`<span style="color:var(--text-secondary)">[ESPERANDO]</span> Elección registrada. Esperando a ${opponentId}...`);
-
-        if (isOnlineMode) {
-            gameChannel.send({
-                type: 'broadcast',
-                event: 'turn_move',
-                payload: { fromId: myPlayerId, move: move }
-            });
-        } else {
-            // IA Bot Simulación
-            setTimeout(() => {
-                const moves = ['cooperate', 'betray', 'solitude'];
-                gameState.opponentMove = moves[Math.floor(Math.random() * moves.length)];
-                checkBothMovesSubmitted();
-            }, 600);
-        }
-    }
-
-    function checkBothMovesSubmitted() {
-        if (gameState.myMove !== null && gameState.opponentMove !== null) {
-            processTurnResults();
-        }
-    }
-
-    // MOTOR MATRIZ DE PAGOS Y EFECTO CRUZADO EN TIEMPO REAL
-    function processTurnResults() {
-        let p1 = gameState.myMove;
-        let p2 = gameState.opponentMove;
-
-        if (p1 === 'tit-for-tat') p1 = gameState.opponentLastMove;
-        if (p2 === 'tit-for-tat') p2 = gameState.myLastMove;
-
-        let logMsg = "";
-
-        if (p1 === 'cooperate' && p2 === 'cooperate') {
-            gameState.synergy = Math.min(100, gameState.synergy + 10);
-            gameState.trust = Math.min(100, gameState.trust + 6);
-            logMsg = `<span class="text-coop">Sinergia Mutua:</span> Ambos cooperaron (+10% Sinergia, +6% Confianza).`;
-        } 
-        else if (p1 === 'betray' && p2 === 'cooperate') {
-            gameState.synergy = Math.max(0, gameState.synergy - 10);
-            gameState.trust = Math.max(0, gameState.trust - 20);
-            logMsg = `<span class="text-defect">Aprovechamiento:</span> Explotaste la cooperación ajena. Confianza caye un 20%.`;
-        } 
-        else if (p1 === 'cooperate' && p2 === 'betray') {
-            gameState.synergy = Math.max(0, gameState.synergy - 10);
-            gameState.trust = Math.max(0, gameState.trust - 20);
-            logMsg = `<span class="text-defect">Fuiste Explotado:</span> ${opponentId} traicionó tu voto de confianza (-20%).`;
-        } 
-        else if (p1 === 'betray' && p2 === 'betray') {
-            gameState.synergy = Math.max(0, gameState.synergy - 25);
-            gameState.trust = Math.max(0, gameState.trust - 25);
-            logMsg = `<span class="text-defect">Guerra Abierta:</span> Traición mutua (-25% Confianza y Sinergia).`;
-        } 
-        else if (p1 === 'solitude' || p2 === 'solitude') {
-            gameState.solitude = Math.min(100, gameState.solitude + 15);
-            logMsg = `<span>Pausa Táctica:</span> Se tomó espacio para recargar batería de la relación.`;
-        }
-
-        gameState.myLastMove = p1;
-        gameState.opponentLastMove = p2;
+# ==========================================
+# GENERADOR DE ARTE 8-BITS (PIXEL ART)
+# ==========================================
+def generate_8bit_hexagon(pi_coord):
+    img = Image.new('RGB', (64, 64), color='black')
+    draw = ImageDraw.Draw(img)
+    
+    hex_points = [(32, 4), (58, 16), (58, 48), (32, 60), (6, 48), (6, 16)]
+    draw.polygon(hex_points, outline='#00f0ff')
+    
+    draw.line([(16, 24), (48, 24)], fill='#00f0ff')
+    draw.line([(12, 40), (52, 40)], fill='#00f0ff')
+    
+    for x in range(18, 46, 3):
+        draw.rectangle([(x, 16), (x+1, 23)], fill='#555555')
+    for x in range(14, 50, 3):
+        draw.rectangle([(x, 32), (x+1, 39)], fill='#555555')
         
-        gameState.history.synergy.push(gameState.synergy);
-        gameState.history.trust.push(gameState.trust);
+    book_pos = (pi_coord % 9) * 3 + 18
+    draw.rectangle([(book_pos, 16), (book_pos+1, 23)], fill='#ff0055')
+    
+    img = img.resize((512, 512), Image.NEAREST)
+    img_path = "temp_hex.png"
+    img.save(img_path)
+    return img_path
 
-        logConsole(`<span class="log-turn">T${gameState.turn}:</span> ${logMsg}`);
-
-        gameState.myMove = null;
-        gameState.opponentMove = null;
-        document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('disabled'));
-
-        if (gameState.trust <= 0 || gameState.synergy <= 0 || gameState.turn >= MAX_TURNS) {
-            evaluarPuntoFinalDeRelacion();
-        } else {
-            gameState.turn++;
-            updateHUD();
-            renderChart();
-        }
-    }
-
-    function evaluarPuntoFinalDeRelacion() {
-        gameState.gameOver = true;
-        updateHUD();
-        renderChart();
-
-        let tituloFinal = "";
-        let descFinal = "";
-
-        if (gameState.trust <= 0 || gameState.synergy <= 0) {
-            tituloFinal = "💔 COLAPSO TOTAL";
-            descFinal = "La falta de confianza destruyó la relación antes de cumplir el límite de turnos.";
-        } else if (gameState.synergy >= 80 && gameState.trust >= 75) {
-            tituloFinal = "💎 SIMBIOSIS PERFECTA";
-            descFinal = "Alcanzaron el máximo equilibrio basado en confianza y crecimiento mutuo.";
-        } else if (gameState.trust < 40 && gameState.solitude > 60) {
-            tituloFinal = "❄️ GUERRA FRÍA";
-            descFinal = "Mantuvieron la relación viva únicamente a base de aislamiento y distancia.";
-        } else {
-            tituloFinal = "⚖️ RELACIÓN INESTABLE";
-            descFinal = "Llegaron al turno 30 con constantes altibajos y tensión permanente.";
-        }
-
-        document.getElementById('resTitle').innerText = tituloFinal;
-        document.getElementById('resSubtitle').innerText = descFinal;
-        document.getElementById('resultOverlay').classList.add('active');
-    }
-
-    function updateHUD() {
-        document.getElementById('val-synergy').innerText = Math.round(gameState.synergy) + '%';
-        document.getElementById('val-trust').innerText = Math.round(gameState.trust) + '%';
-        document.getElementById('val-solitude').innerText = Math.round(gameState.solitude) + '%';
-        document.getElementById('lbl-turn-count').innerText = Math.min(gameState.turn, MAX_TURNS);
-
-        let progressPct = (Math.min(gameState.turn, MAX_TURNS) / MAX_TURNS) * 100;
-        document.getElementById('turn-progress-fill').style.width = progressPct + '%';
-
-        let heartElem = document.querySelector('.heart-wrapper');
-        if (gameState.synergy > 80 && gameState.trust > 70) {
-            document.getElementById('val-state').innerText = "ÓPTIMO";
-            heartElem.style.transform = "scale(1.25)";
-        } else if (gameState.trust < 30 || gameState.synergy < 25) {
-            document.getElementById('val-state').innerText = "CRÍTICO";
-            heartElem.style.transform = "scale(0.8)";
-        } else {
-            document.getElementById('val-state').innerText = "ESTABLE";
-            heartElem.style.transform = "scale(1)";
-        }
-    }
-
-    async function returnToLobby() {
-        document.getElementById('resultOverlay').classList.remove('active');
-        if (gameChannel) gameChannel.unsubscribe();
-        if (isOnlineMode && lobbyChannel) {
-            await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'available' });
-        }
-        switchScreen('screen-lobby');
-    }
-
-    function resetGameState() {
-        gameState = {
-            turn: 1, synergy: 75, trust: 80, solitude: 70,
-            history: { synergy: [75], trust: [80] },
-            myMove: null, opponentMove: null,
-            myLastMove: 'cooperate', opponentLastMove: 'cooperate',
-            gameOver: false
-        };
-        updateHUD();
-    }
-
-    function logConsole(msg) {
-        const consoleElem = document.getElementById('console-log');
-        consoleElem.innerHTML = `<div class="log-entry">${msg}</div>` + consoleElem.innerHTML;
-    }
-
-    function resizeCanvas() {
-        if (!canvas.parentElement) return;
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-        renderChart();
-    }
-
-    function renderChart() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let pad = 10, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
+# ==========================================
+# GENERADOR DEL PDF FINAL
+# ==========================================
+def create_final_pdf(translated_text, pi_coord, entropy, source, target):
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    clean_text = translated_text.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 6, clean_text)
+    
+    pdf.add_page()
+    pdf.set_fill_color(10, 15, 20)
+    pdf.rect(0, 0, 210, 297, 'F')
+    
+    pdf.set_font("Courier", 'B', 12)
+    pdf.set_text_color(0, 255, 100)
+    
+    hex_id = str(pi_coord)[:4]
+    shelf_id = str(pi_coord)[4:7]
+    book_id = str(pi_coord)[7:]
+    
+    matrix_content = f"""
+    =======================================================
+                    LA BIBLIOTECA DE BABEL                 
+    =======================================================
+    
+    SYS.INIT() ... OK
+    LOCATING ONTOLOGICAL COORDINATES ... OK
+    
+    [ PARÁMETROS DEL TRADUCTOR ]
+    > ORIGEN:       {source.upper()}
+    > DESTINO:      {target.upper()}
+    > BYTES:        {len(clean_text)} B
+    
+    [ MAPEO EN EL CONTINUUM DE Pi ]
+    > ABSOLUTA:     #{pi_coord:,}
+    > HEXÁGONO:     HEX-{hex_id}
+    > ANAQUEL:      MURO {shelf_id}
+    > TOMO:         {book_id}
+    
+    [ MATRIZ DE ENTROPÍA (TOP 8 NIBBLES) ]
+    """
+    for pattern, count in entropy:
+        matrix_content += f"> NIBBLE [{pattern}] : {count} HITS\n"
         
-        ctx.strokeStyle = '#261114';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for(let i=0; i<=3; i++) {
-            let y = pad + (h/3)*i;
-            ctx.moveTo(pad, y); ctx.lineTo(pad + w, y);
-        }
-        ctx.stroke();
+    matrix_content += """
+    =======================================================
+    "El universo (que otros llaman la Biblioteca)..."
+    =======================================================
+    """
+    pdf.multi_cell(0, 6, matrix_content)
+    
+    pdf.add_page()
+    pdf.set_fill_color(0, 0, 0)
+    pdf.rect(0, 0, 210, 297, 'F')
+    
+    img_path = generate_8bit_hexagon(pi_coord)
+    
+    pdf.set_text_color(0, 240, 255)
+    pdf.set_font("Courier", 'B', 14)
+    pdf.cell(0, 30, "REPRESENTACION ESPACIAL DEL TOMO", ln=True, align='C')
+    
+    pdf.image(img_path, x=45, y=60, w=120)
+    
+    pdf.set_y(200)
+    pdf.cell(0, 10, f"SECTOR: HEX-{hex_id} | LIBRO: ROJO", ln=True, align='C')
+    
+    pdf_bytes = pdf.output(dest='S').encode('latin-1')
+    
+    if os.path.exists(img_path):
+        os.remove(img_path)
+        
+    return pdf_bytes
 
-        drawLine(gameState.history.synergy, '#10b981');
-        drawLine(gameState.history.trust, '#ff2a4b');
-    }
+# ==========================================
+# FRONTEND Y EJECUCIÓN
+# ==========================================
+st.markdown("<h4 class='magenta-text'>MOTOR DE TRADUCCIÓN</h4>", unsafe_allow_html=True)
+st.markdown("<h1 class='neon-text'>La Biblioteca de Babel</h1>", unsafe_allow_html=True)
+st.divider()
 
-    function drawLine(data, color) {
-        if(data.length < 2) return;
-        let pad = 10, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
-        let step = w / (MAX_TURNS - 1);
+with st.sidebar:
+    st.header("⚙️ Parámetros")
+    lang_options = {'es': 'Español', 'en': 'English', 'fr': 'Français', 'de': 'Alemán'}
+    source = st.selectbox("Idioma Origen", list(lang_options.keys()), format_func=lambda x: lang_options[x], index=2)
+    target = st.selectbox("Idioma Destino", list(lang_options.keys()), format_func=lambda x: lang_options[x], index=0)
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        data.forEach((val, index) => {
-            let x = pad + index * step;
-            let y = pad + h - (val / 100) * h;
-            if(index === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-    }
+uploaded_file = st.file_uploader("Sube un archivo (.txt o .pdf)", type=['txt', 'pdf'])
 
-    function mockLobbyUsers() {
-        const container = document.getElementById('player-list-container');
-        container.innerHTML = `
-            <div class="player-card">
-                <span class="p-name">Bot_Alpha</span>
-                <button class="btn-challenge" onclick="sendChallenge('Bot_Alpha')">Desafiar</button>
-            </div>
-            <div class="player-card">
-                <span class="p-name">Bot_Beta</span>
-                <button class="btn-challenge" onclick="sendChallenge('Bot_Beta')">Desafiar</button>
-            </div>
-        `;
-    }
-</script>
-</body>
-</html>
+if uploaded_file is not None:
+    with st.spinner("Extrayendo texto del documento..."):
+        if uploaded_file.name.endswith('.pdf'):
+            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            file_contents = ""
+            for page in pdf_reader.pages:
+                text = page.extract_text()
+                if text: file_contents += text + "\n"
+        else:
+            file_contents = uploaded_file.read().decode("utf-8")
+            
+    st.success(f"📄 Documento extraído: {len(file_contents)} caracteres.")
+    
+    if st.button("🚀 Iniciar Traducción y Mapeo", use_container_width=True):
+        
+        with st.spinner("Conectando con el continuum matemático y Supabase..."):
+            translated_text = translate_book(file_contents, source, target)
+            pi_coord = calculate_pi_coordinate(translated_text)
+            entropy = generate_nibble_entropy(translated_text)
+            
+            # Sincronizar con Supabase
+            db_success = save_translation_to_supabase(uploaded_file.name, source, target, pi_coord)
+            if db_success:
+                st.toast("¡Metadatos registrados en Supabase con éxito!", icon="☁️")
+            
+            final_pdf_bytes = create_final_pdf(translated_text, pi_coord, entropy, source, target)
+            
+        st.success("¡Obra procesada, indexada y empaquetada con éxito!")
+        
+        st.download_button(
+            label="📥 Descargar Tomo Babeliano (.pdf)",
+            data=final_pdf_bytes,
+            file_name=f"Babel_{uploaded_file.name.split('.')[0]}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
