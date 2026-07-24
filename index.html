@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Theory Lab - Multi-Layer Advanced</title>
+    <title>Game Theory Lab - Multiplayer Real</title>
+    <!-- Librería oficial de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #0d0607;
@@ -231,6 +233,7 @@
             gap: 2px; 
         }
         .action-btn:active { transform: scale(0.96); border-color: var(--accent-red); background: var(--accent-glow); }
+        .action-btn.waiting { opacity: 0.5; pointer-events: none; border-color: var(--accent-info); }
         .action-title { font-size: 0.7rem; font-weight: 700; color: #fff; }
         .action-badge { font-size: 0.58rem; font-weight: 700; }
         .action-desc { font-size: 0.58rem; color: var(--text-secondary); line-height: 1.15; }
@@ -279,7 +282,7 @@
     <header>
         <div class="title-area">
             <h1>Game Theory Lab</h1>
-            <p>Multicapa & Sistema Dinámico</p>
+            <p>Multijugador Real (Supabase)</p>
         </div>
         <div class="heart-wrapper">
             <svg class="heart-icon" viewBox="0 0 24 24">
@@ -291,10 +294,10 @@
     <!-- 1. LOGIN -->
     <div class="screen active" id="screen-login">
         <div class="login-box">
-            <h2>Acceso al Núcleo</h2>
-            <p>Ingresa tu identidad para calibrar las capas de interacción.</p>
-            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Analista_01" maxlength="14" />
-            <button class="btn-primary" onclick="enterLobby()">Iniciar</button>
+            <h2>Acceso Multijugador</h2>
+            <p>Escribe tu alias para buscar o crear una sala con otra persona real.</p>
+            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Jugador_Real_01" maxlength="14" />
+            <button class="btn-primary" onclick="connectToSupabase()">Conectar al Servidor</button>
         </div>
     </div>
 
@@ -302,34 +305,19 @@
     <div class="screen" id="screen-lobby">
         <div class="lobby-header">
             <div>
-                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">INVESTIGADOR</div>
-                <div class="player-badge" id="display-my-id">Jugador</div>
+                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">JUGADOR</div>
+                <div class="player-badge" id="display-my-id">-</div>
             </div>
-            <div class="status-tag">● ACTIVO</div>
+            <div class="status-tag" id="connection-status">● CONECTADO</div>
         </div>
 
-        <div class="player-list-title">Perfiles de IA Multicapa</div>
-        <div class="player-list">
+        <div class="player-list-title">Salas / Investigadores en línea</div>
+        <div class="player-list" id="global-players-list">
             <div class="player-card">
                 <div>
-                    <span class="p-name">IA_Simbiótica</span>
-                    <div class="p-desc">Responde positivamente a capas de conexión profunda.</div>
+                    <span class="p-name">Buscando personas...</span>
+                    <div class="p-desc">Comparte tu link con un compañero.</div>
                 </div>
-                <button class="btn-challenge" onclick="startGame('IA_Simbiótica', 'symbiotic')">Desafiar</button>
-            </div>
-            <div class="player-card">
-                <div>
-                    <span class="p-name">IA_Estratégica</span>
-                    <div class="p-desc">Calcula ventaja competitiva en cada capa.</div>
-                </div>
-                <button class="btn-challenge" onclick="startGame('IA_Estratégica', 'strategic')">Desafiar</button>
-            </div>
-            <div class="player-card">
-                <div>
-                    <span class="p-name">IA_Volátil</span>
-                    <div class="p-desc">Genera alta tensión y cambios repentinos.</div>
-                </div>
-                <button class="btn-challenge" onclick="startGame('IA_Volátil', 'volatile')">Desafiar</button>
             </div>
         </div>
     </div>
@@ -338,7 +326,7 @@
     <div class="screen" id="screen-game">
         <div class="turn-progress-container">
             <div class="turn-progress-info">
-                <span>VS <span id="lbl-opponent-id" style="color:#fff;">Rival</span></span>
+                <span>VS <span id="lbl-opponent-id" style="color:#fff;">Esperando...</span></span>
                 <span>Turno <span id="lbl-turn-count">1</span> / 30</span>
             </div>
             <div class="turn-progress-bar">
@@ -378,42 +366,42 @@
             <button class="layer-tab" onclick="switchLayer(3)">3. Espacio</button>
         </div>
 
-        <!-- CAPA 1: VÍNCULO (Cooperación y Sinergia) -->
+        <!-- CAPA 1: VÍNCULO -->
         <div class="action-container active" id="layer-1">
-            <div class="action-btn" onclick="submitMove('dialogue')">
+            <div class="action-btn" onclick="submitMove('dialogue')" id="btn-dialogue">
                 <span class="action-title">Diálogo Abierto</span>
                 <span class="action-badge" style="color:var(--accent-coop)">+Sinergia / -Tensión</span>
                 <span class="action-desc">Fomenta claridad y reduce fricción mutua.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('support')">
+            <div class="action-btn" onclick="submitMove('support')" id="btn-support">
                 <span class="action-title">Apoyo Mutuo</span>
                 <span class="action-badge" style="color:var(--accent-coop)">++Confianza</span>
                 <span class="action-desc">Refuerza el lazo central de la relación.</span>
             </div>
         </div>
 
-        <!-- CAPA 2: CONFLICTO (Estrategia y Riesgo) -->
+        <!-- CAPA 2: CONFLICTO -->
         <div class="action-container" id="layer-2">
-            <div class="action-btn" onclick="submitMove('pressure')">
+            <div class="action-btn" onclick="submitMove('pressure')" id="btn-pressure">
                 <span class="action-title">Presión Táctica</span>
                 <span class="action-badge" style="color:var(--accent-defect)">+Ventaja / +Tensión</span>
                 <span class="action-desc">Busca beneficio individual elevando el riesgo.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('defend')">
+            <div class="action-btn" onclick="submitMove('defend')" id="btn-defend">
                 <span class="action-title">Contraataque</span>
                 <span class="action-badge" style="color:var(--accent-defect)">Protección</span>
                 <span class="action-desc">Responde a la agresión protegiendo recursos.</span>
             </div>
         </div>
 
-        <!-- CAPA 3: ESPACIO (Autonomía y Descanso) -->
+        <!-- CAPA 3: ESPACIO -->
         <div class="action-container" id="layer-3">
-            <div class="action-btn" onclick="submitMove('autonomy')">
+            <div class="action-btn" onclick="submitMove('autonomy')" id="btn-autonomy">
                 <span class="action-title">Pausa Activa</span>
                 <span class="action-badge" style="color:var(--accent-autonomy)">++Autonomía</span>
                 <span class="action-desc">Recarga espacio personal y calma el sistema.</span>
             </div>
-            <div class="action-btn" onclick="submitMove('mirror')">
+            <div class="action-btn" onclick="submitMove('mirror')" id="btn-mirror">
                 <span class="action-title">Eco Espejo</span>
                 <span class="action-badge" style="color:var(--accent-info)">Adaptativo</span>
                 <span class="action-desc">Replica la última jugada ejecutada por el rival.</span>
@@ -421,7 +409,7 @@
         </div>
 
         <div class="terminal" id="console-log">
-            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Simulación iniciada. Selecciona una capa.</div>
+            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Esperando elección del oponente...</div>
         </div>
     </div>
 
@@ -436,15 +424,23 @@
 </div>
 
 <script>
-    const MAX_TURNS = 30;
-    let myPlayerId = "";
-    let currentBotType = "";
-    let opponentId = "";
+    // --- CREDENCIALES CONFIGURADAS ---
+    const SUPABASE_URL = 'https://lakyqsieafcwoetyvxgd.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_EkrRy2F39M3FXaDAq8NlFg_3lIPMyFS';
 
+    let supabaseClient = null;
+    let myPlayerId = "";
+    let roomId = null;
+    let roomChannel = null;
+    let globalPresenceChannel = null;
+    let opponentId = "";
+    
+    const MAX_TURNS = 30;
     let gameState = {
         turn: 1, synergy: 75, trust: 80, solitude: 70, tension: 15,
         history: { synergy: [75], trust: [80], tension: [15] },
         myLastMove: 'dialogue', opponentLastMove: 'dialogue',
+        myCurrentMove: null, opponentCurrentMove: null,
         gameOver: false
     };
 
@@ -460,67 +456,172 @@
     function switchLayer(layerNum) {
         document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.action-container').forEach(c => c.classList.remove('active'));
-        
         document.querySelectorAll('.layer-tab')[layerNum - 1].classList.add('active');
         document.getElementById(`layer-${layerNum}`).classList.add('active');
     }
 
-    function enterLobby() {
+    function connectToSupabase() {
         const input = document.getElementById('input-player-id').value.trim();
         if (!input) {
-            alert("Por favor escribe tu nombre.");
+            alert("Por favor escribe tu alias.");
             return;
         }
         myPlayerId = input;
         document.getElementById('display-my-id').innerText = myPlayerId;
-        switchScreen('screen-lobby');
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            initGlobalLobby();
+            switchScreen('screen-lobby');
+        } catch (e) {
+            alert("Error al conectar con Supabase. Revisa tus credenciales.");
+            console.error(e);
+        }
     }
 
-    function startGame(botName, botType) {
-        opponentId = botName;
-        currentBotType = botType;
-        document.getElementById('lbl-opponent-id').innerText = opponentId;
-        resetGameState();
+    function initGlobalLobby() {
+        globalPresenceChannel = supabaseClient.channel('global_lab_lobby', {
+            config: { presence: { key: myPlayerId } }
+        });
+
+        globalPresenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = globalPresenceChannel.presenceState();
+                renderPlayerList(state);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await globalPresenceChannel.track({ online_at: new Date().toISOString() });
+                }
+            });
+
+        supabaseClient.channel(`invite:${myPlayerId}`)
+            .on('broadcast', { event: 'challenge' }, payload => {
+                const { fromRoom, challengerName } = payload.payload;
+                if (confirm(`¡${challengerName} te ha retado a una sesión! ¿Aceptar?`)) {
+                    joinRoom(fromRoom, challengerName);
+                }
+            })
+            .subscribe();
+    }
+
+    function renderPlayerList(presenceState) {
+        const listContainer = document.getElementById('global-players-list');
+        listContainer.innerHTML = '';
+
+        let players = Object.keys(presenceState);
+        let otherPlayers = players.filter(p => p !== myPlayerId);
+
+        if (otherPlayers.length === 0) {
+            listContainer.innerHTML = `
+                <div class="player-card">
+                    <div>
+                        <span class="p-name">Estás solo en el servidor</span>
+                        <div class="p-desc">Abre otra pestaña o dale tu enlace a un compañero.</div>
+                    </div>
+                </div>`;
+            return;
+        }
+
+        otherPlayers.forEach(pName => {
+            let card = document.createElement('div');
+            card.className = 'player-card';
+            card.innerHTML = `
+                <div>
+                    <span class="p-name">${pName}</span>
+                    <div class="p-desc">Disponible para sesión conectada.</div>
+                </div>
+                <button class="btn-challenge" onclick="challengePlayer('${pName}')">Desafiar</button>
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+
+    async function challengePlayer(targetName) {
+        roomId = `room_${Math.min(myPlayerId, targetName)}_${Math.max(myPlayerId, targetName)}_${Date.now()}`;
+        opponentId = targetName;
+
+        await supabaseClient.channel(`invite:${targetName}`).send({
+            type: 'broadcast',
+            event: 'challenge',
+            payload: { fromRoom: roomId, challengerName: myPlayerId }
+        });
+
+        setupGameRoom();
         switchScreen('screen-game');
+        document.getElementById('lbl-opponent-id').innerText = opponentId;
+        logConsole(`<span class="log-turn">[SISTEMA]</span> Reto enviado a ${targetName}. Esperando respuesta...`);
+    }
+
+    function joinRoom(targetRoomId, hostName) {
+        roomId = targetRoomId;
+        opponentId = hostName;
+        setupGameRoom();
+        switchScreen('screen-game');
+        document.getElementById('lbl-opponent-id').innerText = opponentId;
+        logConsole(`<span class="log-turn">[SISTEMA]</span> Conectado con éxito a la sesión de ${hostName}.`);
+    }
+
+    function setupGameRoom() {
+        if (roomChannel) supabaseClient.removeChannel(roomChannel);
+
+        roomChannel = supabaseClient.channel(roomId);
+
+        roomChannel
+            .on('broadcast', { event: 'player_move' }, payload => {
+                const { player, move } = payload.payload;
+                if (player !== myPlayerId) {
+                    gameState.opponentCurrentMove = move;
+                    checkTurnCompletion();
+                }
+            })
+            .subscribe();
+
+        resetGameState();
     }
 
     function submitMove(move) {
-        if (gameState.gameOver) return;
+        if (gameState.myCurrentMove || gameState.gameOver) return;
 
-        // IA Multicapa automática
-        let botMove = 'dialogue';
-        if (currentBotType === 'symbiotic') {
-            botMove = Math.random() < 0.7 ? 'dialogue' : 'support';
-        } else if (currentBotType === 'strategic') {
-            botMove = gameState.tension > 40 ? 'pressure' : 'support';
-        } else if (currentBotType === 'volatile') {
-            const moves = ['dialogue', 'pressure', 'autonomy'];
-            botMove = moves[Math.floor(Math.random() * moves.length)];
+        gameState.myCurrentMove = move;
+        lockActionButtons(true);
+        logConsole(`<span class="log-turn">[T${gameState.turn}]</span> Has elegido tu jugada. Esperando al rival...`);
+
+        roomChannel.send({
+            type: 'broadcast',
+            event: 'player_move',
+            payload: { player: myPlayerId, move: move }
+        });
+    }
+
+    function checkTurnCompletion() {
+        if (gameState.myCurrentMove && gameState.opponentCurrentMove) {
+            processTurnResults(gameState.myCurrentMove, gameState.opponentCurrentMove);
+            gameState.myCurrentMove = null;
+            gameState.opponentCurrentMove = null;
+            lockActionButtons(false);
         }
-
-        processTurnResults(move, botMove);
     }
 
     function processTurnResults(p1, p2) {
         let actualP1 = p1 === 'mirror' ? gameState.opponentLastMove : p1;
-        let actualP2 = p2;
+        let actualP2 = p2 === 'mirror' ? gameState.myLastMove : p2;
 
         let dSynergy = 0, dTrust = 0, dSolitude = 0, dTension = 0;
         let logMsg = "";
 
-        // Interacciones complejas multicapa
         if (actualP1 === 'dialogue' && actualP2 === 'dialogue') {
             dSynergy = 8; dTrust = 6; dTension = -10;
-            logMsg = `<span class="text-coop">Sintonía Fina:</span> Diálogo mutuo (+Sinergia, -Tensión).`;
+            logMsg = `<span class="text-coop">Sintonía Mutua:</span> Ambos dialogaron (-Tensión).`;
         } else if (actualP1 === 'support' && actualP2 === 'support') {
             dSynergy = 12; dTrust = 10; dTension = -5;
             logMsg = `<span class="text-coop">Simbiosis Total:</span> Apoyo conjunto masivo.`;
-        } else if (actualP1 === 'pressure' && actualP2 === 'dialogue') {
+        } else if (actualP1 === 'pressure' && actualP2 !== 'pressure') {
             dSynergy = -5; dTrust = -15; dTension = 20;
-            logMsg = `<span class="text-defect">Asimetría:</span> Presionaste el diálogo ajeno (+Tensión).`;
-        } else if (actualP1 === 'dialogue' && actualP2 === 'pressure') {
+            logMsg = `<span class="text-defect">Presión Aplicada:</span> Presionaste y desestabilizaste al rival.`;
+        } else if (actualP1 !== 'pressure' && actualP2 === 'pressure') {
             dSynergy = -5; dTrust = -15; dTension = 20;
-            logMsg = `<span class="text-defect">Aprovechamiento:</span> El rival presionó tu apertura.`;
+            logMsg = `<span class="text-defect">Aprovechamiento:</span> El rival te presionó en este turno.`;
         } else if (actualP1 === 'pressure' && actualP2 === 'pressure') {
             dSynergy = -20; dTrust = -25; dTension = 35;
             logMsg = `<span class="text-defect">Choque Directo:</span> Presión mutua (Alta Tensión).`;
@@ -529,10 +630,9 @@
             logMsg = `<span>Respiro Estructural:</span> Pausa activa ejecutada.`;
         } else {
             dSynergy = 2; dTrust = 3; dTension = 5;
-            logMsg = `<span>Interacción Neutra:</span> Intercambio estándar de capas.`;
+            logMsg = `<span>Interacción Cruzada:</span> Intercambio de capas completado.`;
         }
 
-        // Aplicar cambios al estado del sistema
         gameState.synergy = Math.max(0, Math.min(100, gameState.synergy + dSynergy));
         gameState.trust = Math.max(0, Math.min(100, gameState.trust + dTrust));
         gameState.solitude = Math.max(0, Math.min(100, gameState.solitude + dSolitude));
@@ -556,6 +656,13 @@
         }
     }
 
+    function lockActionButtons(lock) {
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            if (lock) btn.classList.add('waiting');
+            else btn.classList.remove('waiting');
+        });
+    }
+
     function evaluarPuntoFinalDeRelacion() {
         gameState.gameOver = true;
         updateHUD();
@@ -566,13 +673,13 @@
 
         if (gameState.tension >= 100) {
             tituloFinal = "💥 COLAPSO POR TENSIÓN";
-            descFinal = "El sistema acumuló demasiada fricción y rompió estabilidad.";
+            descFinal = "El sistema acumuló demasiada fricción.";
         } else if (gameState.trust <= 0) {
             tituloFinal = "💔 QUIEBRE DE CONFIANZA";
             descFinal = "La confianza se desvaneció por completo.";
         } else if (gameState.synergy >= 85 && gameState.tension < 20) {
             tituloFinal = "🌟 ARMONÍA MULTICAPA";
-            descFinal = "Diseño estructural óptimo alcanzado con éxito.";
+            descFinal = "Diseño estructural óptimo alcanzado entre ambos.";
         } else {
             tituloFinal = "⚖️ EQUILIBRIO COMPLEJO";
             descFinal = "Ciclo de 30 turnos completado con éxito.";
@@ -604,10 +711,11 @@
             turn: 1, synergy: 75, trust: 80, solitude: 70, tension: 15,
             history: { synergy: [75], trust: [80], tension: [15] },
             myLastMove: 'dialogue', opponentLastMove: 'dialogue',
+            myCurrentMove: null, opponentCurrentMove: null,
             gameOver: false
         };
         updateHUD();
-        document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SISTEMA]</span> Sesión sincronizada con ${opponentId}.</div>`;
+        document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SISTEMA]</span> Conectados en sala de sesión. Elige tu jugada.</div>`;
     }
 
     function logConsole(msg) {
