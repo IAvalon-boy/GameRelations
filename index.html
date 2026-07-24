@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Theory Mobile - Realtime Multiplayer</title>
-    <!-- Supabase JS Client v2 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Game Theory Lab - Multi-Layer Advanced</title>
     <style>
         :root {
             --bg-color: #0d0607;
@@ -18,6 +16,7 @@
             --accent-defect: #ff2a4b;
             --accent-autonomy: #f59e0b;
             --accent-info: #3b82f6;
+            --accent-tension: #ec4899;
             --text-primary: #fdf2f4;
             --text-secondary: #a38288;
             --text-muted: #664d52;
@@ -38,12 +37,11 @@
             padding: 12px;
         }
 
-        /* Frame Móvil */
         .app-container {
             width: 100%;
             max-width: 430px;
-            height: 92vh;
-            max-height: 880px;
+            height: 94vh;
+            max-height: 920px;
             background-color: var(--bg-color);
             border: 2px solid var(--panel-border);
             border-radius: 40px;
@@ -69,17 +67,16 @@
 
         .heart-wrapper {
             position: relative;
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 20;
         }
 
         .heart-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             fill: var(--accent-red);
             filter: drop-shadow(0 0 6px var(--accent-red));
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -90,14 +87,14 @@
             display: none;
             flex: 1;
             flex-direction: column;
-            padding: 16px;
+            padding: 14px;
             overflow-y: auto;
-            gap: 14px;
+            gap: 12px;
         }
 
         .screen.active { display: flex; }
 
-        /* 1. LOGIN SCREEN */
+        /* LOGIN */
         .login-box {
             margin: auto 0;
             background: var(--panel-bg);
@@ -109,7 +106,6 @@
             gap: 16px;
             text-align: center;
         }
-
         .login-box h2 { font-size: 1.2rem; color: #fff; }
         .login-box p { font-size: 0.75rem; color: var(--text-secondary); }
 
@@ -142,7 +138,7 @@
         }
         .btn-primary:active { transform: scale(0.97); }
 
-        /* 2. LOBBY SCREEN */
+        /* LOBBY */
         .lobby-header {
             display: flex;
             justify-content: space-between;
@@ -152,22 +148,11 @@
             border-radius: 16px;
             border: 1px solid var(--panel-border);
         }
-
         .player-badge { font-size: 0.8rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
         .status-tag { font-size: 0.65rem; color: var(--accent-coop); font-weight: bold; }
 
-        .player-list-title {
-            font-size: 0.7rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
-
-        .player-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        .player-list-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-secondary); }
+        .player-list { display: flex; flex-direction: column; gap: 8px; }
 
         .player-card {
             background: var(--panel-bg);
@@ -178,8 +163,9 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .player-card .p-name { font-size: 0.85rem; font-weight: 700; color: #fff; font-family: var(--font-mono); }
+        .player-card .p-desc { font-size: 0.62rem; color: var(--text-secondary); }
+
         .btn-challenge {
             background: rgba(255, 42, 75, 0.15);
             border: 1px solid var(--accent-red);
@@ -190,40 +176,72 @@
             font-weight: 800;
             cursor: pointer;
         }
-        .btn-challenge:active { background: var(--accent-red); color: #fff; }
 
-        /* 3. GAMEPLAY SCREEN */
-        .turn-progress-container { padding: 0 4px 4px 4px; }
+        /* GAMEPLAY */
+        .turn-progress-container { padding: 0 2px; }
         .turn-progress-info { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-secondary); font-weight: 700; margin-bottom: 4px; }
         .turn-progress-bar { width: 100%; height: 6px; background: var(--panel-border); border-radius: 3px; overflow: hidden; }
         .turn-progress-fill { height: 100%; width: 3.33%; background: linear-gradient(90deg, var(--accent-red-dark), var(--accent-red)); transition: width 0.3s ease; }
 
-        .chart-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .chart-box { width: 100%; height: 120px; background: rgba(0, 0, 0, 0.4); border-radius: 12px; position: relative; overflow: hidden; }
+        .chart-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .chart-box { width: 100%; height: 95px; background: rgba(0, 0, 0, 0.4); border-radius: 10px; position: relative; overflow: hidden; }
         canvas { width: 100%; height: 100%; }
 
-        .hud-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .hud-card { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 4px; text-align: center; }
-        .hud-card .title { font-size: 0.58rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
-        .hud-card .value { font-size: 0.82rem; font-family: var(--font-mono); font-weight: 700; margin-top: 2px; }
+        .hud-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+        .hud-card { background: rgba(0, 0, 0, 0.3); border: 1px solid var(--panel-border); border-radius: 8px; padding: 4px; text-align: center; }
+        .hud-card .title { font-size: 0.52rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+        .hud-card .value { font-size: 0.75rem; font-family: var(--font-mono); font-weight: 700; margin-top: 1px; }
 
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .action-btn { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 14px; padding: 10px 12px; cursor: pointer; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 3px; }
+        /* CAPAS DE ACCIÓN */
+        .layer-tabs {
+            display: flex;
+            gap: 4px;
+            background: rgba(0,0,0,0.4);
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid var(--panel-border);
+        }
+        .layer-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 6px 2px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .layer-tab.active { background: var(--panel-border); color: #fff; }
+
+        .action-container { display: none; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .action-container.active { display: grid; }
+
+        .action-btn { 
+            background: var(--panel-bg); 
+            border: 1px solid var(--panel-border); 
+            border-radius: 12px; 
+            padding: 8px 10px; 
+            cursor: pointer; 
+            transition: all 0.15s ease; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 2px; 
+        }
         .action-btn:active { transform: scale(0.96); border-color: var(--accent-red); background: var(--accent-glow); }
-        .action-btn.selected { border-color: var(--accent-coop); background: rgba(16, 185, 129, 0.15); }
-        .action-btn.disabled { opacity: 0.4; pointer-events: none; }
+        .action-title { font-size: 0.7rem; font-weight: 700; color: #fff; }
+        .action-badge { font-size: 0.58rem; font-weight: 700; }
+        .action-desc { font-size: 0.58rem; color: var(--text-secondary); line-height: 1.15; }
 
-        .action-title { font-size: 0.75rem; font-weight: 700; color: #fff; }
-        .action-badge { font-size: 0.62rem; font-weight: 700; }
-        .action-desc { font-size: 0.62rem; color: var(--text-secondary); line-height: 1.2; }
-
-        .terminal { background: rgba(0,0,0,0.6); border: 1px solid var(--panel-border); border-radius: 12px; padding: 8px 10px; font-family: var(--font-mono); font-size: 0.66rem; max-height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-        .log-entry { line-height: 1.3; }
+        .terminal { background: rgba(0,0,0,0.6); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 8px; font-family: var(--font-mono); font-size: 0.62rem; max-height: 70px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+        .log-entry { line-height: 1.2; }
         .log-turn { color: var(--accent-red); font-weight: bold; }
         .text-coop { color: var(--accent-coop); }
         .text-defect { color: var(--accent-defect); }
 
-        /* MODALES Y OVERLAYS */
+        /* MODAL */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -253,9 +271,6 @@
             gap: 14px;
             width: 100%;
         }
-
-        .modal-buttons { display: flex; gap: 10px; width: 100%; }
-        .btn-sec { background: transparent; border: 1px solid var(--panel-border); color: var(--text-secondary); padding: 10px; border-radius: 12px; font-weight: 700; flex: 1; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -264,7 +279,7 @@
     <header>
         <div class="title-area">
             <h1>Game Theory Lab</h1>
-            <p id="header-subtitle">Multiplayer Engine</p>
+            <p>Multicapa & Sistema Dinámico</p>
         </div>
         <div class="heart-wrapper">
             <svg class="heart-icon" viewBox="0 0 24 24">
@@ -273,33 +288,53 @@
         </div>
     </header>
 
-    <!-- 1. PANTALLA LOGIN -->
+    <!-- 1. LOGIN -->
     <div class="screen active" id="screen-login">
         <div class="login-box">
-            <h2>Ingresar a la Red</h2>
-            <p>Escribe tu ID / Nombre de usuario para buscar oponentes en línea.</p>
-            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Player_01" maxlength="12" />
-            <button class="btn-primary" onclick="connectToLobby()">Conectar</button>
+            <h2>Acceso al Núcleo</h2>
+            <p>Ingresa tu identidad para calibrar las capas de interacción.</p>
+            <input type="text" id="input-player-id" class="input-field" placeholder="ej. Analista_01" maxlength="14" />
+            <button class="btn-primary" onclick="enterLobby()">Iniciar</button>
         </div>
     </div>
 
-    <!-- 2. PANTALLA LOBBY -->
+    <!-- 2. LOBBY -->
     <div class="screen" id="screen-lobby">
         <div class="lobby-header">
             <div>
-                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">CONECTADO COMO</div>
+                <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: bold;">INVESTIGADOR</div>
                 <div class="player-badge" id="display-my-id">Jugador</div>
             </div>
-            <div class="status-tag" id="status-tag-indicator">● EN LÍNEA</div>
+            <div class="status-tag">● ACTIVO</div>
         </div>
 
-        <div class="player-list-title">Jugadores Disponibles</div>
-        <div class="player-list" id="player-list-container">
-            <!-- Cargado dinámicamente -->
+        <div class="player-list-title">Perfiles de IA Multicapa</div>
+        <div class="player-list">
+            <div class="player-card">
+                <div>
+                    <span class="p-name">IA_Simbiótica</span>
+                    <div class="p-desc">Responde positivamente a capas de conexión profunda.</div>
+                </div>
+                <button class="btn-challenge" onclick="startGame('IA_Simbiótica', 'symbiotic')">Desafiar</button>
+            </div>
+            <div class="player-card">
+                <div>
+                    <span class="p-name">IA_Estratégica</span>
+                    <div class="p-desc">Calcula ventaja competitiva en cada capa.</div>
+                </div>
+                <button class="btn-challenge" onclick="startGame('IA_Estratégica', 'strategic')">Desafiar</button>
+            </div>
+            <div class="player-card">
+                <div>
+                    <span class="p-name">IA_Volátil</span>
+                    <div class="p-desc">Genera alta tensión y cambios repentinos.</div>
+                </div>
+                <button class="btn-challenge" onclick="startGame('IA_Volátil', 'volatile')">Desafiar</button>
+            </div>
         </div>
     </div>
 
-    <!-- 3. PANTALLA DE JUEGO -->
+    <!-- 3. GAMEPLAY -->
     <div class="screen" id="screen-game">
         <div class="turn-progress-container">
             <div class="turn-progress-info">
@@ -326,8 +361,8 @@
                     <div class="value" id="val-solitude" style="color:var(--accent-autonomy);">70%</div>
                 </div>
                 <div class="hud-card">
-                    <div class="title">Estado</div>
-                    <div class="value" id="val-state" style="font-size:0.6rem; color:var(--accent-coop);">ESTABLE</div>
+                    <div class="title">Tensión</div>
+                    <div class="value" id="val-tension" style="color:var(--accent-tension);">15%</div>
                 </div>
             </div>
 
@@ -336,95 +371,80 @@
             </div>
         </div>
 
-        <div class="action-grid" id="actionGrid">
-            <div class="action-btn" id="btn-coop" onclick="submitMove('cooperate')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Cooperar</span>
-                    <span class="action-badge" style="color:var(--accent-coop)">+Sinergia</span>
-                </div>
-                <div class="action-desc">Suma beneficio mutuo si se mantiene la confianza.</div>
-            </div>
+        <!-- SELECTOR DE CAPAS -->
+        <div class="layer-tabs">
+            <button class="layer-tab active" onclick="switchLayer(1)">1. Vínculo</button>
+            <button class="layer-tab" onclick="switchLayer(2)">2. Conflicto</button>
+            <button class="layer-tab" onclick="switchLayer(3)">3. Espacio</button>
+        </div>
 
-            <div class="action-btn" id="btn-betray" onclick="submitMove('betray')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Traicionar</span>
-                    <span class="action-badge" style="color:var(--accent-defect)">Riesgo</span>
-                </div>
-                <div class="action-desc">Ventaja individual a costa de romper la confianza.</div>
+        <!-- CAPA 1: VÍNCULO (Cooperación y Sinergia) -->
+        <div class="action-container active" id="layer-1">
+            <div class="action-btn" onclick="submitMove('dialogue')">
+                <span class="action-title">Diálogo Abierto</span>
+                <span class="action-badge" style="color:var(--accent-coop)">+Sinergia / -Tensión</span>
+                <span class="action-desc">Fomenta claridad y reduce fricción mutua.</span>
             </div>
-
-            <div class="action-btn" id="btn-autonomy" onclick="submitMove('solitude')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Autonomía</span>
-                    <span class="action-badge" style="color:var(--accent-autonomy)">+Recarga</span>
-                </div>
-                <div class="action-desc">Espacio personal para evitar saturación.</div>
+            <div class="action-btn" onclick="submitMove('support')">
+                <span class="action-title">Apoyo Mutuo</span>
+                <span class="action-badge" style="color:var(--accent-coop)">++Confianza</span>
+                <span class="action-desc">Refuerza el lazo central de la relación.</span>
             </div>
+        </div>
 
-            <div class="action-btn" id="btn-titfortat" onclick="submitMove('tit-for-tat')">
-                <div style="display:flex; justify-content:space-between;">
-                    <span class="action-title">Recíproco</span>
-                    <span class="action-badge" style="color:var(--accent-info)">Espejo</span>
-                </div>
-                <div class="action-desc">Replica la jugada anterior del rival.</div>
+        <!-- CAPA 2: CONFLICTO (Estrategia y Riesgo) -->
+        <div class="action-container" id="layer-2">
+            <div class="action-btn" onclick="submitMove('pressure')">
+                <span class="action-title">Presión Táctica</span>
+                <span class="action-badge" style="color:var(--accent-defect)">+Ventaja / +Tensión</span>
+                <span class="action-desc">Busca beneficio individual elevando el riesgo.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('defend')">
+                <span class="action-title">Contraataque</span>
+                <span class="action-badge" style="color:var(--accent-defect)">Protección</span>
+                <span class="action-desc">Responde a la agresión protegiendo recursos.</span>
+            </div>
+        </div>
+
+        <!-- CAPA 3: ESPACIO (Autonomía y Descanso) -->
+        <div class="action-container" id="layer-3">
+            <div class="action-btn" onclick="submitMove('autonomy')">
+                <span class="action-title">Pausa Activa</span>
+                <span class="action-badge" style="color:var(--accent-autonomy)">++Autonomía</span>
+                <span class="action-desc">Recarga espacio personal y calma el sistema.</span>
+            </div>
+            <div class="action-btn" onclick="submitMove('mirror')">
+                <span class="action-title">Eco Espejo</span>
+                <span class="action-badge" style="color:var(--accent-info)">Adaptativo</span>
+                <span class="action-desc">Replica la última jugada ejecutada por el rival.</span>
             </div>
         </div>
 
         <div class="terminal" id="console-log">
-            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Partida iniciada. Elige tu jugada.</div>
+            <div class="log-entry"><span class="log-turn">[SISTEMA]</span> Simulación iniciada. Selecciona una capa.</div>
         </div>
     </div>
 
-    <!-- MODAL SOLICITUD DE DESAFÍO -->
-    <div class="modal-overlay" id="challengeModal">
-        <div class="modal-card">
-            <div style="font-size: 1.1rem; font-weight: 800; color: #fff;">¡Desafío Recibido!</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="challengeModalText">Un jugador te ha invitado a jugar.</div>
-            <div class="modal-buttons">
-                <button class="btn-sec" onclick="respondChallenge(false)">Rechazar</button>
-                <button class="btn-primary" style="flex:1;" onclick="respondChallenge(true)">Aceptar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- OVERLAY RESULTADO / PUNTO DE EQUILIBRIO -->
+    <!-- OVERLAY RESULTADO -->
     <div class="modal-overlay" id="resultOverlay">
         <div class="modal-card">
-            <div style="font-size: 1.2rem; font-weight: 800; color: #fff;" id="resTitle">Fin de la Partida</div>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="resSubtitle">Evaluando punto final de la relación...</div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: #fff;" id="resTitle">Fin de la Simulación</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);" id="resSubtitle">Evaluando métricas de estabilidad...</div>
             <button class="btn-primary" style="width:100%;" onclick="returnToLobby()">Volver al Lobby</button>
         </div>
     </div>
 </div>
 
 <script>
-    // CREDENCIALES DE SUPABASE INTEGRADAS DIRECTAMENTE
-    const SUPABASE_URL = 'https://ausdkdeqpwiksgytgkte.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_QP2QBGFw7i2NLHQ3uihZLQ_444lil0G';
-    
-    let supabase = null;
-    let isOnlineMode = false;
-
-    if (SUPABASE_URL.indexOf('YOUR-SUPABASE') === -1 && window.supabase) {
-        try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            isOnlineMode = true;
-        } catch(e) { console.error("Error cargando Supabase:", e); }
-    }
-
     const MAX_TURNS = 30;
     let myPlayerId = "";
+    let currentBotType = "";
     let opponentId = "";
-    let gameRoomId = "";
-    let lobbyChannel = null;
-    let gameChannel = null;
-    let pendingChallenger = null;
 
     let gameState = {
-        turn: 1, synergy: 75, trust: 80, solitude: 70,
-        history: { synergy: [75], trust: [80] },
-        myMove: null, opponentMove: null,
-        myLastMove: 'cooperate', opponentLastMove: 'cooperate',
+        turn: 1, synergy: 75, trust: 80, solitude: 70, tension: 15,
+        history: { synergy: [75], trust: [80], tension: [15] },
+        myLastMove: 'dialogue', opponentLastMove: 'dialogue',
         gameOver: false
     };
 
@@ -434,225 +454,100 @@
     function switchScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
-        if (screenId === 'screen-game') {
-            setTimeout(resizeCanvas, 100);
-        }
+        if (screenId === 'screen-game') setTimeout(resizeCanvas, 100);
     }
 
-    // CONEXIÓN Y LOBBY EN TIEMPO REAL
-    function connectToLobby() {
+    function switchLayer(layerNum) {
+        document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.action-container').forEach(c => c.classList.remove('active'));
+        
+        document.querySelectorAll('.layer-tab')[layerNum - 1].classList.add('active');
+        document.getElementById(`layer-${layerNum}`).classList.add('active');
+    }
+
+    function enterLobby() {
         const input = document.getElementById('input-player-id').value.trim();
         if (!input) {
-            alert("Por favor escribe un ID de jugador.");
+            alert("Por favor escribe tu nombre.");
             return;
         }
-        
         myPlayerId = input;
         document.getElementById('display-my-id').innerText = myPlayerId;
         switchScreen('screen-lobby');
-
-        if (!isOnlineMode) {
-            document.getElementById('status-tag-indicator').innerText = '● MODO MOCK/DEMO';
-            document.getElementById('status-tag-indicator').style.color = 'var(--accent-autonomy)';
-            mockLobbyUsers();
-            return;
-        }
-
-        lobbyChannel = supabase.channel('lobby-presence', {
-            config: { presence: { key: myPlayerId } }
-        });
-
-        lobbyChannel
-            .on('presence', { event: 'sync' }, () => {
-                const state = lobbyChannel.presenceState();
-                renderLobbyPlayers(state);
-            })
-            .on('broadcast', { event: 'challenge_received' }, (payload) => {
-                if (payload.payload.targetId === myPlayerId) {
-                    pendingChallenger = payload.payload.fromId;
-                    document.getElementById('challengeModalText').innerText = `${pendingChallenger} te ha desafiado a una partida.`;
-                    document.getElementById('challengeModal').classList.add('active');
-                }
-            })
-            .on('broadcast', { event: 'challenge_response' }, (payload) => {
-                if (payload.payload.targetId === myPlayerId) {
-                    if (payload.payload.accepted) {
-                        startMultiplayerGame(payload.payload.fromId, payload.payload.roomId);
-                    } else {
-                        alert(`${payload.payload.fromId} rechazó la solicitud.`);
-                    }
-                }
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'available' });
-                }
-            });
     }
 
-    function renderLobbyPlayers(presenceState) {
-        const container = document.getElementById('player-list-container');
-        container.innerHTML = "";
-
-        Object.keys(presenceState).forEach(id => {
-            if (id === myPlayerId) return;
-
-            const userPresence = presenceState[id][0];
-            const isAvailable = userPresence && userPresence.status === 'available';
-
-            const card = document.createElement('div');
-            card.className = 'player-card';
-            card.innerHTML = `
-                <span class="p-name">${id}</span>
-                <button class="btn-challenge" ${!isAvailable ? 'disabled' : ''} onclick="sendChallenge('${id}')">
-                    ${isAvailable ? 'Desafiar' : 'En juego'}
-                </button>
-            `;
-            container.appendChild(card);
-        });
-
-        if (container.children.length === 0) {
-            container.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); text-align:center; padding:20px;">Esperando otros jugadores online...</div>`;
-        }
-    }
-
-    function sendChallenge(targetId) {
-        if (!isOnlineMode) {
-            startMultiplayerGame(targetId, 'demo_room');
-            return;
-        }
-
-        const roomId = `room_${myPlayerId}_${targetId}`;
-        lobbyChannel.send({
-            type: 'broadcast',
-            event: 'challenge_received',
-            payload: { fromId: myPlayerId, targetId: targetId, roomId: roomId }
-        });
-        alert(`Desafío enviado a ${targetId}. Esperando confirmación...`);
-    }
-
-    function respondChallenge(accepted) {
-        document.getElementById('challengeModal').classList.remove('active');
-        const roomId = `room_${pendingChallenger}_${myPlayerId}`;
-
-        if (isOnlineMode) {
-            lobbyChannel.send({
-                type: 'broadcast',
-                event: 'challenge_response',
-                payload: { fromId: myPlayerId, targetId: pendingChallenger, accepted: accepted, roomId: roomId }
-            });
-        }
-
-        if (accepted) {
-            startMultiplayerGame(pendingChallenger, roomId);
-        }
-    }
-
-    // INICIO DE SALA SINCRONIZADA
-    async function startMultiplayerGame(targetId, roomId) {
-        opponentId = targetId;
-        gameRoomId = roomId;
-
-        if (isOnlineMode && lobbyChannel) {
-            await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'busy' });
-        }
-
+    function startGame(botName, botType) {
+        opponentId = botName;
+        currentBotType = botType;
         document.getElementById('lbl-opponent-id').innerText = opponentId;
         resetGameState();
         switchScreen('screen-game');
-
-        if (!isOnlineMode) return;
-
-        gameChannel = supabase.channel(gameRoomId);
-        gameChannel
-            .on('broadcast', { event: 'turn_move' }, (payload) => {
-                if (payload.payload.fromId === opponentId) {
-                    gameState.opponentMove = payload.payload.move;
-                    checkBothMovesSubmitted();
-                }
-            })
-            .subscribe();
     }
 
     function submitMove(move) {
-        if (gameState.gameOver || gameState.myMove !== null) return;
+        if (gameState.gameOver) return;
 
-        gameState.myMove = move;
-        
-        document.querySelectorAll('.action-btn').forEach(b => b.classList.add('disabled'));
-
-        logConsole(`<span style="color:var(--text-secondary)">[ESPERANDO]</span> Elección registrada. Esperando a ${opponentId}...`);
-
-        if (isOnlineMode) {
-            gameChannel.send({
-                type: 'broadcast',
-                event: 'turn_move',
-                payload: { fromId: myPlayerId, move: move }
-            });
-        } else {
-            // IA Bot Simulación
-            setTimeout(() => {
-                const moves = ['cooperate', 'betray', 'solitude'];
-                gameState.opponentMove = moves[Math.floor(Math.random() * moves.length)];
-                checkBothMovesSubmitted();
-            }, 600);
+        // IA Multicapa automática
+        let botMove = 'dialogue';
+        if (currentBotType === 'symbiotic') {
+            botMove = Math.random() < 0.7 ? 'dialogue' : 'support';
+        } else if (currentBotType === 'strategic') {
+            botMove = gameState.tension > 40 ? 'pressure' : 'support';
+        } else if (currentBotType === 'volatile') {
+            const moves = ['dialogue', 'pressure', 'autonomy'];
+            botMove = moves[Math.floor(Math.random() * moves.length)];
         }
+
+        processTurnResults(move, botMove);
     }
 
-    function checkBothMovesSubmitted() {
-        if (gameState.myMove !== null && gameState.opponentMove !== null) {
-            processTurnResults();
-        }
-    }
+    function processTurnResults(p1, p2) {
+        let actualP1 = p1 === 'mirror' ? gameState.opponentLastMove : p1;
+        let actualP2 = p2;
 
-    // MOTOR MATRIZ DE PAGOS Y EFECTO CRUZADO EN TIEMPO REAL
-    function processTurnResults() {
-        let p1 = gameState.myMove;
-        let p2 = gameState.opponentMove;
-
-        if (p1 === 'tit-for-tat') p1 = gameState.opponentLastMove;
-        if (p2 === 'tit-for-tat') p2 = gameState.myLastMove;
-
+        let dSynergy = 0, dTrust = 0, dSolitude = 0, dTension = 0;
         let logMsg = "";
 
-        if (p1 === 'cooperate' && p2 === 'cooperate') {
-            gameState.synergy = Math.min(100, gameState.synergy + 10);
-            gameState.trust = Math.min(100, gameState.trust + 6);
-            logMsg = `<span class="text-coop">Sinergia Mutua:</span> Ambos cooperaron (+10% Sinergia, +6% Confianza).`;
-        } 
-        else if (p1 === 'betray' && p2 === 'cooperate') {
-            gameState.synergy = Math.max(0, gameState.synergy - 10);
-            gameState.trust = Math.max(0, gameState.trust - 20);
-            logMsg = `<span class="text-defect">Aprovechamiento:</span> Explotaste la cooperación ajena. Confianza caye un 20%.`;
-        } 
-        else if (p1 === 'cooperate' && p2 === 'betray') {
-            gameState.synergy = Math.max(0, gameState.synergy - 10);
-            gameState.trust = Math.max(0, gameState.trust - 20);
-            logMsg = `<span class="text-defect">Fuiste Explotado:</span> ${opponentId} traicionó tu voto de confianza (-20%).`;
-        } 
-        else if (p1 === 'betray' && p2 === 'betray') {
-            gameState.synergy = Math.max(0, gameState.synergy - 25);
-            gameState.trust = Math.max(0, gameState.trust - 25);
-            logMsg = `<span class="text-defect">Guerra Abierta:</span> Traición mutua (-25% Confianza y Sinergia).`;
-        } 
-        else if (p1 === 'solitude' || p2 === 'solitude') {
-            gameState.solitude = Math.min(100, gameState.solitude + 15);
-            logMsg = `<span>Pausa Táctica:</span> Se tomó espacio para recargar batería de la relación.`;
+        // Interacciones complejas multicapa
+        if (actualP1 === 'dialogue' && actualP2 === 'dialogue') {
+            dSynergy = 8; dTrust = 6; dTension = -10;
+            logMsg = `<span class="text-coop">Sintonía Fina:</span> Diálogo mutuo (+Sinergia, -Tensión).`;
+        } else if (actualP1 === 'support' && actualP2 === 'support') {
+            dSynergy = 12; dTrust = 10; dTension = -5;
+            logMsg = `<span class="text-coop">Simbiosis Total:</span> Apoyo conjunto masivo.`;
+        } else if (actualP1 === 'pressure' && actualP2 === 'dialogue') {
+            dSynergy = -5; dTrust = -15; dTension = 20;
+            logMsg = `<span class="text-defect">Asimetría:</span> Presionaste el diálogo ajeno (+Tensión).`;
+        } else if (actualP1 === 'dialogue' && actualP2 === 'pressure') {
+            dSynergy = -5; dTrust = -15; dTension = 20;
+            logMsg = `<span class="text-defect">Aprovechamiento:</span> El rival presionó tu apertura.`;
+        } else if (actualP1 === 'pressure' && actualP2 === 'pressure') {
+            dSynergy = -20; dTrust = -25; dTension = 35;
+            logMsg = `<span class="text-defect">Choque Directo:</span> Presión mutua (Alta Tensión).`;
+        } else if (actualP1 === 'autonomy' || actualP2 === 'autonomy') {
+            dSolitude = 15; dTension = -15; dTrust = 2;
+            logMsg = `<span>Respiro Estructural:</span> Pausa activa ejecutada.`;
+        } else {
+            dSynergy = 2; dTrust = 3; dTension = 5;
+            logMsg = `<span>Interacción Neutra:</span> Intercambio estándar de capas.`;
         }
 
-        gameState.myLastMove = p1;
-        gameState.opponentLastMove = p2;
+        // Aplicar cambios al estado del sistema
+        gameState.synergy = Math.max(0, Math.min(100, gameState.synergy + dSynergy));
+        gameState.trust = Math.max(0, Math.min(100, gameState.trust + dTrust));
+        gameState.solitude = Math.max(0, Math.min(100, gameState.solitude + dSolitude));
+        gameState.tension = Math.max(0, Math.min(100, gameState.tension + dTension));
+
+        gameState.myLastMove = actualP1;
+        gameState.opponentLastMove = actualP2;
         
         gameState.history.synergy.push(gameState.synergy);
         gameState.history.trust.push(gameState.trust);
+        gameState.history.tension.push(gameState.tension);
 
         logConsole(`<span class="log-turn">T${gameState.turn}:</span> ${logMsg}`);
 
-        gameState.myMove = null;
-        gameState.opponentMove = null;
-        document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('disabled'));
-
-        if (gameState.trust <= 0 || gameState.synergy <= 0 || gameState.turn >= MAX_TURNS) {
+        if (gameState.trust <= 0 || gameState.tension >= 100 || gameState.turn >= MAX_TURNS) {
             evaluarPuntoFinalDeRelacion();
         } else {
             gameState.turn++;
@@ -669,18 +564,18 @@
         let tituloFinal = "";
         let descFinal = "";
 
-        if (gameState.trust <= 0 || gameState.synergy <= 0) {
-            tituloFinal = "💔 COLAPSO TOTAL";
-            descFinal = "La falta de confianza destruyó la relación antes de cumplir el límite de turnos.";
-        } else if (gameState.synergy >= 80 && gameState.trust >= 75) {
-            tituloFinal = "💎 SIMBIOSIS PERFECTA";
-            descFinal = "Alcanzaron el máximo equilibrio basado en confianza y crecimiento mutuo.";
-        } else if (gameState.trust < 40 && gameState.solitude > 60) {
-            tituloFinal = "❄️ GUERRA FRÍA";
-            descFinal = "Mantuvieron la relación viva únicamente a base de aislamiento y distancia.";
+        if (gameState.tension >= 100) {
+            tituloFinal = "💥 COLAPSO POR TENSIÓN";
+            descFinal = "El sistema acumuló demasiada fricción y rompió estabilidad.";
+        } else if (gameState.trust <= 0) {
+            tituloFinal = "💔 QUIEBRE DE CONFIANZA";
+            descFinal = "La confianza se desvaneció por completo.";
+        } else if (gameState.synergy >= 85 && gameState.tension < 20) {
+            tituloFinal = "🌟 ARMONÍA MULTICAPA";
+            descFinal = "Diseño estructural óptimo alcanzado con éxito.";
         } else {
-            tituloFinal = "⚖️ RELACIÓN INESTABLE";
-            descFinal = "Llegaron al turno 30 con constantes altibajos y tensión permanente.";
+            tituloFinal = "⚖️ EQUILIBRIO COMPLEJO";
+            descFinal = "Ciclo de 30 turnos completado con éxito.";
         }
 
         document.getElementById('resTitle').innerText = tituloFinal;
@@ -692,42 +587,27 @@
         document.getElementById('val-synergy').innerText = Math.round(gameState.synergy) + '%';
         document.getElementById('val-trust').innerText = Math.round(gameState.trust) + '%';
         document.getElementById('val-solitude').innerText = Math.round(gameState.solitude) + '%';
+        document.getElementById('val-tension').innerText = Math.round(gameState.tension) + '%';
         document.getElementById('lbl-turn-count').innerText = Math.min(gameState.turn, MAX_TURNS);
 
         let progressPct = (Math.min(gameState.turn, MAX_TURNS) / MAX_TURNS) * 100;
         document.getElementById('turn-progress-fill').style.width = progressPct + '%';
-
-        let heartElem = document.querySelector('.heart-wrapper');
-        if (gameState.synergy > 80 && gameState.trust > 70) {
-            document.getElementById('val-state').innerText = "ÓPTIMO";
-            heartElem.style.transform = "scale(1.25)";
-        } else if (gameState.trust < 30 || gameState.synergy < 25) {
-            document.getElementById('val-state').innerText = "CRÍTICO";
-            heartElem.style.transform = "scale(0.8)";
-        } else {
-            document.getElementById('val-state').innerText = "ESTABLE";
-            heartElem.style.transform = "scale(1)";
-        }
     }
 
-    async function returnToLobby() {
+    function returnToLobby() {
         document.getElementById('resultOverlay').classList.remove('active');
-        if (gameChannel) gameChannel.unsubscribe();
-        if (isOnlineMode && lobbyChannel) {
-            await lobbyChannel.track({ online_at: new Date().toISOString(), status: 'available' });
-        }
         switchScreen('screen-lobby');
     }
 
     function resetGameState() {
         gameState = {
-            turn: 1, synergy: 75, trust: 80, solitude: 70,
-            history: { synergy: [75], trust: [80] },
-            myMove: null, opponentMove: null,
-            myLastMove: 'cooperate', opponentLastMove: 'cooperate',
+            turn: 1, synergy: 75, trust: 80, solitude: 70, tension: 15,
+            history: { synergy: [75], trust: [80], tension: [15] },
+            myLastMove: 'dialogue', opponentLastMove: 'dialogue',
             gameOver: false
         };
         updateHUD();
+        document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SISTEMA]</span> Sesión sincronizada con ${opponentId}.</div>`;
     }
 
     function logConsole(msg) {
@@ -744,7 +624,7 @@
 
     function renderChart() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let pad = 10, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
+        let pad = 6, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
         
         ctx.strokeStyle = '#261114';
         ctx.lineWidth = 1;
@@ -756,12 +636,13 @@
         ctx.stroke();
 
         drawLine(gameState.history.synergy, '#10b981');
-        drawLine(gameState.history.trust, '#ff2a4b');
+        drawLine(gameState.history.trust, '#3b82f6');
+        drawLine(gameState.history.tension, '#ec4899');
     }
 
     function drawLine(data, color) {
         if(data.length < 2) return;
-        let pad = 10, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
+        let pad = 6, w = canvas.width - pad * 2, h = canvas.height - pad * 2;
         let step = w / (MAX_TURNS - 1);
 
         ctx.strokeStyle = color;
@@ -774,20 +655,6 @@
             else ctx.lineTo(x, y);
         });
         ctx.stroke();
-    }
-
-    function mockLobbyUsers() {
-        const container = document.getElementById('player-list-container');
-        container.innerHTML = `
-            <div class="player-card">
-                <span class="p-name">Bot_Alpha</span>
-                <button class="btn-challenge" onclick="sendChallenge('Bot_Alpha')">Desafiar</button>
-            </div>
-            <div class="player-card">
-                <span class="p-name">Bot_Beta</span>
-                <button class="btn-challenge" onclick="sendChallenge('Bot_Beta')">Desafiar</button>
-            </div>
-        `;
     }
 </script>
 </body>
