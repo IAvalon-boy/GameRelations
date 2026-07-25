@@ -226,7 +226,7 @@
             display: none; 
             grid-template-columns: 1fr 1fr; 
             gap: 6px; 
-            max-height: 180px; 
+            max-height: 150px; 
             overflow-y: auto; 
             padding-right: 2px;
         }
@@ -250,13 +250,48 @@
         .action-badge { font-size: 0.5rem; font-weight: 600; }
         .action-desc { font-size: 0.5rem; color: var(--text-secondary); line-height: 1.1; }
 
-        .terminal { background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 8px; font-family: var(--font-mono); font-size: 0.58rem; max-height: 55px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+        /* 2D MARIO-STYLE BLOCKS FOR MOVES */
+        .mario-blocks-container {
+            display: flex;
+            gap: 6px;
+        }
+        .mario-block {
+            flex: 1;
+            background: #b53120;
+            border: 2px solid #000;
+            box-shadow: inset 2px 2px 0px rgba(255,255,255,0.25), inset -2px -2px 0px rgba(0,0,0,0.6), 0 3px 0px #000;
+            border-radius: 3px;
+            padding: 5px 6px;
+            text-align: center;
+            font-family: var(--font-mono);
+        }
+        .block-label {
+            font-size: 0.45rem;
+            color: #ffd700;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 1px;
+            text-shadow: 1px 1px #000;
+            letter-spacing: 0.05em;
+        }
+        .block-value {
+            font-size: 0.6rem;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 1px 1px #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .terminal { background: rgba(0,0,0,0.5); border: 1px solid var(--panel-border); border-radius: 10px; padding: 6px 8px; font-family: var(--font-mono); font-size: 0.58rem; max-height: 50px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
         .log-entry { line-height: 1.2; }
         .log-turn { color: var(--ig-blue); font-weight: bold; }
         .text-vibes { color: #00ffcc; }
         .text-drama { color: #ff3366; }
 
-        /* MODAL */
+        /* MODAL & SOPHISTICATED ANIMATIONS */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -286,6 +321,32 @@
             gap: 12px;
             width: 100%;
         }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0,255,204,0.3)); }
+            15% { transform: scale(1.35); filter: drop-shadow(0 0 15px rgba(0,255,204,0.8)); }
+            30% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0,255,204,0.3)); }
+            45% { transform: scale(1.2); filter: drop-shadow(0 0 12px rgba(0,255,204,0.6)); }
+            60% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0,255,204,0.3)); }
+        }
+
+        @keyframes breakHeart {
+            0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 5px rgba(255,51,102,0.3)); }
+            20% { transform: scale(1.25) rotate(-12deg); }
+            40% { transform: scale(0.9) rotate(18deg); filter: grayscale(40%) drop-shadow(0 0 2px rgba(255,51,102,0.1)); }
+            60% { transform: scale(1.1) rotate(-18deg); }
+            80% { transform: scale(0.7) rotate(22deg); opacity: 0.8; }
+            100% { transform: scale(0.4) rotate(0deg) translateY(12px); opacity: 0.4; filter: grayscale(80%); }
+        }
+
+        @keyframes floatNeutral {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(5deg); }
+        }
+
+        .anim-heartbeat { animation: heartbeat 1.2s infinite ease-in-out; display: inline-block; }
+        .anim-break { animation: breakHeart 0.85s ease forwards; display: inline-block; }
+        .anim-neutral { animation: floatNeutral 2.6s infinite ease-in-out; display: inline-block; }
     </style>
 </head>
 <body>
@@ -301,7 +362,7 @@
                 <p>Game Theory Feed</p>
             </div>
         </div>
-        <div style="font-size: 0.6rem; color: var(--text-muted); font-family: var(--font-mono);">v2.9</div>
+        <div style="font-size: 0.6rem; color: var(--text-muted); font-family: var(--font-mono);">v3.2</div>
     </header>
 
     <!-- 1. LOGIN -->
@@ -476,12 +537,12 @@
                 <span class="action-desc">Spreading side gossip behind the scenes.</span>
             </div>
             <div class="action-btn" onclick="submitMove('ghosting_pro')">
-                <span class="action-title">Pro Ghosting</span>
+                <span class="action-title">Ghosting</span>
                 <span class="action-badge" style="color:#ff3366">Disappear 4ever</span>
                 <span class="action-desc">Vanish into thin air without explanation.</span>
             </div>
             <div class="action-btn" onclick="submitMove('trolling')">
-                <span class="action-title">Feed Trolling</span>
+                <span class="action-title">Trolling</span>
                 <span class="action-badge" style="color:#ff3366">+Chaos / Trolling</span>
                 <span class="action-desc">Post ragebait just to watch them react.</span>
             </div>
@@ -571,14 +632,27 @@
             </div>
         </div>
 
+        <!-- 2D MARIO-STYLE BLOCKS DISPLAYING MOVES -->
+        <div class="mario-blocks-container">
+            <div class="mario-block">
+                <span class="block-label">YOUR MOVE</span>
+                <span class="block-value" id="val-my-move">-</span>
+            </div>
+            <div class="mario-block" style="background:#2051b5;">
+                <span class="block-label">RIVAL'S MOVE</span>
+                <span class="block-value" id="val-opp-move">-</span>
+            </div>
+        </div>
+
         <div class="terminal" id="console-log">
             <div class="log-entry"><span class="log-turn">[SYSTEM]</span> Waiting on opponent's move...</div>
         </div>
     </div>
 
-    <!-- RESULT OVERLAY -->
+    <!-- RESULT OVERLAY WITH SOPHISTICATED ANIMATIONS -->
     <div class="modal-overlay" id="resultOverlay">
         <div class="modal-card">
+            <div id="resIconContainer"></div>
             <div style="font-size: 1.1rem; font-weight: 700; color: #fff;" id="resTitle">Simulation Complete</div>
             <div style="font-size: 0.75rem; color: var(--text-secondary);" id="resSubtitle">Vibe analysis finalized...</div>
             <button class="btn-primary" style="width:100%;" onclick="returnToLobby()">Back to Feed</button>
@@ -604,6 +678,18 @@
         myLastMove: 'dialogue', opponentLastMove: 'dialogue',
         myCurrentMove: null, opponentCurrentMove: null,
         gameOver: false
+    };
+
+    const moveNames = {
+        dialogue: 'Spill Tea', support: 'Hold It Down', memes: 'Send Reels', hype: 'MC Praise',
+        facetime: 'FaceTime', matching: 'Matching Bios', story_hint: 'Story Hint', cute_sticker: 'Cute Sticker',
+        outfit_comp: 'Outfit Comp', smooth_flirt: 'Smooth Flirt', sudden_confess: 'Confession', coord_emojis: 'Emojis',
+        pressure: 'Gaslight', defend: 'Block & Del', ghost: 'Leave Read', story_shade: 'Shade Story',
+        flex: 'Spotlight', gossip: 'Rant Mutuals', ghosting_pro: 'Ghosting', trolling: 'Trolling',
+        exposure: 'Receipts', silent_treatment: 'Deep Freeze', public_diss: 'Diss Track', baiting: 'Baiting',
+        autonomy: 'Touch Grass', mirror: 'NPC Mimic', mute: 'Mute Notifs', alt_mode: 'Alt Stealth',
+        block: 'Hard Reset', doomscroll: 'Doomscroll', read_receipts_off: 'Off Receipts', temp_block: 'Temp Block',
+        sad_playlist: 'Sad Playlist', airplane_mode: 'Airplane Mode', zen_reflex: 'Zen Refl', coffee_silence: 'Coffee Silence'
     };
 
     const canvas = document.getElementById('payoffChart');
@@ -755,6 +841,7 @@
         if (gameState.myCurrentMove || gameState.gameOver) return;
 
         gameState.myCurrentMove = move;
+        document.getElementById('val-my-move').innerText = moveNames[move] || move;
         lockActionButtons(true);
         logConsole(`<span class="log-turn">[E${gameState.turn}]</span> Move locked. Waiting on opponent...`);
 
@@ -764,16 +851,18 @@
             payload: { player: myPlayerId, move: move }
         });
 
-        // Check immediately in case opponent move arrived earlier
         checkTurnCompletion();
     }
 
     function checkTurnCompletion() {
         if (gameState.myCurrentMove && gameState.opponentCurrentMove) {
+            document.getElementById('val-opp-move').innerText = moveNames[gameState.opponentCurrentMove] || gameState.opponentCurrentMove;
             processTurnResults(gameState.myCurrentMove, gameState.opponentCurrentMove);
             gameState.myCurrentMove = null;
             gameState.opponentCurrentMove = null;
-            lockActionButtons(false);
+            if (!gameState.gameOver) {
+                lockActionButtons(false);
+            }
         }
     }
 
@@ -830,7 +919,7 @@
         logConsole(`<span class="log-turn">E${gameState.turn}:</span> ${logMsg}`);
 
         if (gameState.trust <= 0 || gameState.tension >= 100 || gameState.turn >= MAX_TURNS) {
-            evaluarPuntoFinalDeRelacion();
+            evaluateRelationshipEnding();
         } else {
             gameState.turn++;
             updateHUD();
@@ -845,30 +934,53 @@
         });
     }
 
-    function evaluarPuntoFinalDeRelacion() {
+    async function evaluateRelationshipEnding() {
         gameState.gameOver = true;
         updateHUD();
         renderChart();
 
-        let tituloFinal = "";
-        let descFinal = "";
+        let finalTitle = "";
+        let finalSubtitle = "";
+        let iconHtml = "";
 
         if (gameState.tension >= 100) {
-            tituloFinal = "💥 FULL CANCELATION COLLAPSE";
-            descFinal = "Too much drama. The timeline completely burned down.";
+            finalTitle = "💥 FULL CANCELATION COLLAPSE";
+            finalSubtitle = "Too much drama. The timeline completely burned down.";
+            iconHtml = `<div class="anim-break" style="font-size: 3.5rem;">💔</div>`;
         } else if (gameState.trust <= 0) {
-            tituloFinal = "💔 UNFRIENDED & BLOCKED";
-            descFinal = "Total betrayal arc. Zero trust remaining.";
+            finalTitle = "💔 UNFRIENDED & BLOCKED";
+            finalSubtitle = "Total betrayal arc. Zero trust remaining.";
+            iconHtml = `<div class="anim-break" style="font-size: 3.5rem;">🖤</div>`;
         } else if (gameState.synergy >= 85 && gameState.tension < 20) {
-            tituloFinal = "🌟 GOATED DUO ENERGY";
-            descFinal = "Absolute pinnacle of harmonious synchronization.";
+            finalTitle = "🌟 GOATED DUO ENERGY";
+            finalSubtitle = "Absolute pinnacle of harmonious synchronization.";
+            iconHtml = `<div class="anim-heartbeat" style="font-size: 3.5rem;">💖</div>`;
         } else {
-            tituloFinal = "⚖️ CHRONICALLY ONLINE EQUILIBRIUM";
-            descFinal = "30 eras survived. Perfectly mid outcome.";
+            finalTitle = "⚖️ CHRONICALLY ONLINE EQUILIBRIUM";
+            finalSubtitle = "30 eras survived. Perfectly mid outcome.";
+            iconHtml = `<div class="anim-neutral" style="font-size: 3.5rem;">⚖️</div>`;
         }
 
-        document.getElementById('resTitle').innerText = tituloFinal;
-        document.getElementById('resSubtitle').innerText = descFinal;
+        // Save final match results to Supabase table match_results
+        try {
+            await supabaseClient.from('match_results').upsert([
+                {
+                    room_id: roomId,
+                    player_1: myPlayerId,
+                    player_2: opponentId,
+                    final_synergy: Math.round(gameState.synergy),
+                    final_trust: Math.round(gameState.trust),
+                    final_tension: Math.round(gameState.tension),
+                    outcome_title: finalTitle
+                }
+            ], { onConflict: 'room_id' });
+        } catch (err) {
+            console.error("Error saving match result to Supabase:", err);
+        }
+
+        document.getElementById('resIconContainer').innerHTML = iconHtml;
+        document.getElementById('resTitle').innerText = finalTitle;
+        document.getElementById('resSubtitle').innerText = finalSubtitle;
         document.getElementById('resultOverlay').classList.add('active');
     }
 
@@ -896,6 +1008,8 @@
             myCurrentMove: null, opponentCurrentMove: null,
             gameOver: false
         };
+        document.getElementById('val-my-move').innerText = '-';
+        document.getElementById('val-opp-move').innerText = '-';
         updateHUD();
         document.getElementById('console-log').innerHTML = `<div class="log-entry"><span class="log-turn">[SYSTEM]</span> Feed loaded. Pick your move.</div>`;
     }
@@ -949,3 +1063,4 @@
 </script>
 </body>
 </html>
+ñ
